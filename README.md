@@ -54,5 +54,10 @@ yarn dev
 ```
 Open http://localhost:3000 with your browser to see the result.
 
+## tiny reminder 
+firebase.tsx is not uploaded here due to privacy concerns.
+
+
+
 ## tiny reminder
 firebase.tsx is not uploaded here due to privacy concerns.
