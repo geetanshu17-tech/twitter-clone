@@ -8,6 +8,5 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-} as NextConfig; // We use 'as NextConfig' here to override the strict check
-
+} as NextConfig; 
 export default nextConfig;
