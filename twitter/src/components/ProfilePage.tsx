@@ -13,6 +13,7 @@ import {
 
 import { useAuth } from "@/context/AuthContext";
 import axiosInstance from "@/lib/axiosInstance";
+import LoginHistorySection from "@/app/login-history-profile/page";
 
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -273,7 +274,7 @@ export default function ProfilePage() {
         onValueChange={setActiveTab}
         className="w-full"
       >
-        <TabsList className="grid h-14 w-full grid-cols-5 rounded-none border-b border-zinc-800 bg-black p-0">
+        <TabsList className="grid h-14 w-full grid-cols-6 rounded-none border-b border-zinc-800 bg-black p-0">
 
           <TabsTrigger
             value="posts"
@@ -420,7 +421,18 @@ export default function ProfilePage() {
           >
             Media
           </TabsTrigger>
-
+          
+          <TabsTrigger
+            value="security"
+            className="
+              relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
+              hover:bg-zinc-900 hover:text-white data-[state=active]:bg-transparent data-[state=active]:text-white
+              after:absolute after:bottom-0 after:left-5 after:right-5 after:h-1 after:rounded-full after:bg-transparent
+              data-[state=active]:after:bg-sky-500
+            "
+          >
+            Security
+          </TabsTrigger>
         </TabsList>
 
         {/* ================= Posts ================= */}
@@ -563,6 +575,9 @@ export default function ProfilePage() {
 
     </Card>
 
+  </TabsContent>
+  <TabsContent value="security" className="mt-0 p-5">
+           <LoginHistorySection />
   </TabsContent>
 
 </Tabs>

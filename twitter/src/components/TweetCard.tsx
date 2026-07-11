@@ -7,7 +7,12 @@ import {
   Repeat2,
   Share,
   MoreHorizontal,
+  Trash2 
 } from "lucide-react";
+
+import { useAuth } from "@/context/AuthContext"; 
+import axiosInstance from "@/lib/axiosInstance";
+import { Button } from "./ui/button";
 
 const defaultMockTweet = {
   id: "mock-1",
@@ -28,11 +33,7 @@ const defaultMockTweet = {
 };
 
 export default function TweetCard({ tweet }: { tweet?: any }) {
-  const user = {
-    _id: "demo-user",
-    username: "demo",
-  };
-
+  const { user } = useAuth();
   const initialTweetData = tweet ? { ...defaultMockTweet, ...tweet } : defaultMockTweet;
 
   const [tweetstate, settweetstate] = useState({
@@ -41,32 +42,90 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
     retweetedBy: initialTweetData.retweetedBy || [],
   });
 
-  const likeTweet = (e: React.MouseEvent) => {
+  // <-- NEW: State to hide the tweet instantly when deleted
+  const [isDeleted, setIsDeleted] = useState(false);
+
+  const likeTweet = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    settweetstate((prev: any) => {
-      const isLiked = prev.likedBy.includes(user._id);
-      return {
+    if (!user) return; 
+
+    const isLiked = tweetstate.likedBy.includes(user._id);
+
+    settweetstate((prev: any) => ({
+      ...prev,
+      likes: isLiked ? prev.likes - 1 : prev.likes + 1,
+      likedBy: isLiked
+        ? prev.likedBy.filter((id: string) => id !== user._id)
+        : [...prev.likedBy, user._id],
+    }));
+
+    try {
+      await axiosInstance.post(`/like/${tweetstate._id}`, { userId: user._id });
+    } catch (error) {
+      console.error("Like interaction failed:", error);
+      settweetstate((prev: any) => ({
         ...prev,
-        likes: isLiked ? prev.likes - 1 : prev.likes + 1,
+        likes: isLiked ? prev.likes + 1 : prev.likes - 1, 
         likedBy: isLiked
-          ? prev.likedBy.filter((id: string) => id !== user._id)
-          : [...prev.likedBy, user._id],
-      };
-    });
+          ? [...prev.likedBy, user._id] 
+          : prev.likedBy.filter((id: string) => id !== user._id), 
+      }));
+    }
   };
 
-  const retweetTweet = (e: React.MouseEvent) => {
+  const retweetTweet = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    settweetstate((prev: any) => {
-      const isRetweeted = prev.retweetedBy.includes(user._id);
-      return {
+    if (!user) return;
+
+    const isRetweeted = tweetstate.retweetedBy.includes(user._id);
+
+    settweetstate((prev: any) => ({
+      ...prev,
+      retweets: isRetweeted ? prev.retweets - 1 : prev.retweets + 1,
+      retweetedBy: isRetweeted
+        ? prev.retweetedBy.filter((id: string) => id !== user._id)
+        : [...prev.retweetedBy, user._id],
+    }));
+
+    try {
+      await axiosInstance.post(`/retweet/${tweetstate._id}`, { userId: user._id });
+    } catch (error) {
+      console.error("Retweet interaction failed:", error);
+      settweetstate((prev: any) => ({
         ...prev,
-        retweets: isRetweeted ? prev.retweets - 1 : prev.retweets + 1,
+        retweets: isRetweeted ? prev.retweets + 1 : prev.retweets - 1,
         retweetedBy: isRetweeted
-          ? prev.retweetedBy.filter((id: string) => id !== user._id)
-          : [...prev.retweetedBy, user._id],
-      };
-    });
+          ? [...prev.retweetedBy, user._id]
+          : prev.retweetedBy.filter((id: string) => id !== user._id),
+      }));
+    }
+  };
+
+  // ==========================================
+  // NEW: DELETE FUNCTION LOGIC
+  // ==========================================
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation(); 
+    
+    if (!user) return;
+
+    const confirmDelete = window.confirm("Are you sure you want to delete this post?");
+    if (!confirmDelete) return;
+
+    // Instantly hide the tweet for a snappy UI
+    setIsDeleted(true);
+
+    try {
+      // Send the delete request to the backend
+      await axiosInstance.delete(`/post/${tweetstate._id}`, {
+        data: { userId: user._id }
+      });
+      console.log("Tweet deleted from database");
+    } catch (error) {
+      console.error("Failed to delete tweet:", error);
+      setIsDeleted(false); // Put it back if the server fails
+      alert("Something went wrong. Could not delete the post.");
+    }
   };
 
   const formatNumber = (num: number) => {
@@ -75,8 +134,11 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
     return num.toString();
   };
 
-  const isLiked = tweetstate.likedBy.includes(user._id);
-  const isRetweet = tweetstate.retweetedBy.includes(user._id);
+  const isLiked = user ? tweetstate.likedBy.includes(user._id) : false;
+  const isRetweet = user ? tweetstate.retweetedBy.includes(user._id) : false;
+
+  // <-- NEW: If the user deleted the tweet, don't render anything!
+  if (isDeleted) return null;
 
   return (
     <article className="px-4 pt-3 pb-2 border-b border-gray-800 bg-black hover:bg-white/[0.02] transition-colors cursor-pointer w-full">
@@ -89,9 +151,7 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
           </Avatar>
         </div>
 
-        
         <div className="flex-1 min-w-0">
-          
           <div className="flex items-center justify-between mb-0.5">
             <div className="flex items-center space-x-1 overflow-hidden text-[15px]">
               <span className="font-bold text-white hover:underline truncate">
@@ -121,9 +181,23 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
               </span>
             </div>
 
-            <button className="text-gray-500 hover:text-blue-500 hover:bg-blue-500/10 p-2 rounded-full transition-colors group -mr-2">
-              <MoreHorizontal className="h-5 w-5 group-hover:text-blue-500" />
-            </button>
+            {/* ========================================== */}
+            {/* NEW: RENDER TRASH ICON FOR AUTHOR ONLY */}
+            {/* ========================================== */}
+            <div className="flex items-center">
+              {user && user._id === tweetstate.author._id && (
+                <button 
+                  onClick={handleDelete}
+                  className="text-gray-500 hover:text-red-500 hover:bg-red-500/10 p-2 rounded-full transition-colors group"
+                  title="Delete Post"
+                >
+                  <Trash2 className="h-5 w-5 group-hover:text-red-500" />
+                </button>
+              )}
+              <Button className="text-gray-500 hover:text-blue-500 hover:bg-blue-500/10 p-2 rounded-full transition-colors group -mr-2">
+                <MoreHorizontal className="h-5 w-5 group-hover:text-blue-500" />
+              </Button>
+            </div>
           </div>
 
           {/* Text Content */}
@@ -141,8 +215,24 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
               />
             </div>
           )}
+          {/* ========================================== */}
+          {/* 🎙️ NEW: ATTACHED AUDIO PLAYER */}
+          {/* ========================================== */}
+          {tweetstate.audio?.url && (
+            <div className="mb-3 w-full border border-gray-800 rounded-xl overflow-hidden bg-gray-900/50 p-2">
+              <audio 
+                controls 
+                className="w-full h-10"
+                preload="metadata"
+              >
+                {/* 🚨 Pointing directly to your Express backend port 5000 */}
+                <source src={`http://localhost:5000${tweetstate.audio.url}`} />
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          )}
 
-          
+          {/* Action Buttons (Comment, Retweet, Like, Share) */}
           <div className="flex items-center justify-between text-gray-500 max-w-[425px]">
             {/* Comment */}
             <button className="flex items-center group transition-colors hover:text-blue-500 outline-none">
@@ -169,17 +259,17 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
               className={`flex items-center group transition-colors outline-none ${isLiked ? 'text-pink-600' : 'hover:text-pink-600'}`}
             >
               <div className="p-2 rounded-full group-hover:bg-pink-500/10 transition-colors">
-                <Heart className={`h-[18px] w-[18px] ${isLiked ? 'fill-current' : ''}`} />
+                <Heart className={`h-4.5 w-4.5 ${isLiked ? 'fill-current' : ''}`} />
               </div>
               <span className="text-[13px] px-1">{formatNumber(tweetstate.likes || 0)}</span>
             </button>
 
             {/* Share */}
-            <button className="flex items-center group transition-colors hover:text-blue-500 outline-none">
+            <Button className="flex items-center group transition-colors hover:text-blue-500 outline-none">
               <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                <Share className="h-[18px] w-[18px]" />
+                <Share className="h-4.5 w-4.5" />
               </div>
-            </button>
+            </Button>
           </div>
         </div>
       </div>

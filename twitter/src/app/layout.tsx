@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import OtpModal from "@/components/OtpModal";
 import { cn } from "@/lib/utils";
+
+import { AuthProvider } from "@/context/AuthContext"; 
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -30,7 +33,15 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        
+        {/* 2. WRAP CHILDREN IN THE AUTH PROVIDER */}
+        <AuthProvider>
+          {children}
+          <OtpModal />
+        </AuthProvider>
+        
+      </body>
     </html>
   );
 }

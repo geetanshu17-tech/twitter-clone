@@ -1,6 +1,6 @@
 "use client";
-
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import {
   Home, Search, Bell, Mail, Bookmark, User, MoreHorizontal, Settings, LogOut
 } from 'lucide-react';
@@ -20,10 +20,48 @@ interface SidebarProps {
 export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarProps) {
   const { user, logout } = useAuth();
 
+  const [unreadCount, setUnreadCount] = useState(0);
+  const prevCountRef = useRef(0);
+  const isFirstLoad = useRef(true); // NEW: Better way to track the first page load
+
+  useEffect(() => {
+    const fetchBadgeCount = async () => {
+      if (!user) return;
+      try {
+        const res = await axios.get(`http://localhost:5000/notifications/${user.email}`);
+        const fetchedNotifications = res.data;
+        const currentCount = fetchedNotifications.length;
+
+        // If we have MORE notifications than the last time we checked...
+        if (currentCount > prevCountRef.current) {
+          
+          // Only fire the popup if it's NOT the initial page load
+          if (!isFirstLoad.current && user.notificationEnabled && Notification.permission === "granted") {
+            const latestNotif = fetchedNotifications[0]; 
+            new Notification("New Alert!", {
+              body: latestNotif.message
+            });
+          }
+        }
+
+        setUnreadCount(currentCount);
+        prevCountRef.current = currentCount;
+        isFirstLoad.current = false; // Mark initial load as complete
+
+      } catch (error) {
+        console.error("Failed to fetch badge count", error);
+      }
+    };
+
+    fetchBadgeCount();
+    const interval = setInterval(fetchBadgeCount, 10000); 
+    return () => clearInterval(interval);
+  }, [user]);
+
   const navigation = [
     { name: 'Home', icon: Home, current: currentPage === 'home', page: 'home' },
     { name: 'Explore', icon: Search, current: currentPage === 'explore', page: 'explore' },
-    { name: 'Notifications', icon: Bell, current: currentPage === 'notifications', page: 'notifications', badge: true },
+    { name: 'Notifications', icon: Bell, current: currentPage === 'notifications', page: 'notifications', badgeCount: unreadCount },
     { name: 'Messages', icon: Mail, current: currentPage === 'messages', page: 'messages' },
     { name: 'Bookmarks', icon: Bookmark, current: currentPage === 'bookmarks', page: 'bookmarks' },
     { name: 'Profile', icon: User, current: currentPage === 'profile', page: 'profile' },
@@ -51,9 +89,9 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
                   <span className={`hidden md:block ml-5 text-xl pr-4 ${item.current ? 'font-bold' : 'font-normal'}`}>
                     {item.name}
                   </span>
-                  {item.badge && (
+                  {item.badgeCount !== undefined && item.badgeCount > 0 && (
                     <span className="hidden md:flex ml-2 bg-blue-500 text-white text-[11px] font-bold rounded-full h-5 w-5 items-center justify-center">
-                      3
+                      {item.badgeCount}
                     </span>
                   )}
                 </div>
@@ -81,7 +119,7 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
                 <div className="flex items-center">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={user.avatar} alt={user.displayName} className="object-cover" />
-                    <AvatarFallback>{user.displayName[0]}</AvatarFallback>
+                    <AvatarFallback>{user?.displayName?.[0] || 'U'}</AvatarFallback>
                   </Avatar>
                   <div className="hidden md:flex flex-col text-left ml-3 mr-4">
                     <span className="text-white font-bold text-[15px] leading-tight">{user.displayName}</span>

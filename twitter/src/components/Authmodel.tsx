@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-
+import Link from 'next/link'; // <-- NEW: Imported Next.js Link
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
 import LoadingSpinner from './loading-spinner';
@@ -12,8 +12,6 @@ import { Input } from './ui/input';
 import { Separator } from './ui/separator';
 import { useAuth } from '@/context/AuthContext';
 import TwitterLogo from './Twitterlogo';
-
-
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -81,8 +79,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
       onClose();
       setFormData({ email: '', password: '', username: '', displayName: '' });
       setErrors({});
-    } catch (error) {
-      setErrors({ general: 'Authentication failed. Please try again.' });
+    } catch (error: any) {
+      // Log the actual error to your browser console so you can see Firebase complaining
+      console.error("Login Error:", error); 
+      setErrors({ general: 'Authentication failed. Please check your credentials.' });
     }
   };
 
@@ -191,7 +191,20 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-white">Password</Label>
+              {/* NEW: Flex container to hold Label and Forgot Password link */}
+              <div className="flex justify-between items-center">
+                <Label htmlFor="password" className="text-white">Password</Label>
+                {mode === 'login' && (
+                  <Link 
+                    href="/forgot-password" 
+                    className="text-blue-500 hover:underline text-xs"
+                    onClick={onClose} // Closes the modal when clicked
+                  >
+                    Forgot password?
+                  </Link>
+                )}
+              </div>
+              
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <Input

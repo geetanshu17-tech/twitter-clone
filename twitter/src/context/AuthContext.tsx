@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import axios from "axios";
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
@@ -22,6 +24,7 @@ interface User {
   email: string;
   website: string;
   location: string;
+  notificationEnabled?: boolean;
 }
 
 interface AuthContextType {
@@ -43,6 +46,9 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   googlesignin: () => void;
+  pendingOtpEmail: string | null;
+  setPendingOtpEmail: (email: string | null) => void;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,14 +66,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingOtpEmail, setPendingOtpEmail] = useState<string | null>(null); 
+  const router = useRouter();
 
   useEffect(() => {
-    // Check for existing session
     const unsubcribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser?.email) {
         try {
+          // 1. Check if the user is already saved in local storage
+          const existingSession = localStorage.getItem("twitter-user");
+
+          // 2. If no session exists, it's a FRESH login. 
+          // Stop here! Let your login() or googlesignin() functions handle the OTP flow.
+          if (!existingSession) {
+            setIsLoading(false);
+            return; 
+          }
+
+          // 3. If a session DOES exist, it's a page refresh. 
+          // Safe to fetch the user and explicitly tell the backend to skip the OTP.
           const res = await axiosInstance.get("/loggedinuser", {
-            params: { email: firebaseUser.email },
+            params: { email: firebaseUser.email, skipOtp: true },
           });
 
           if (res.data) {
@@ -75,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.setItem("twitter-user", JSON.stringify(res.data));
           }
         } catch (err) {
-          console.log("Failed to fetch user:", err);
+          console.log("Failed to fetch user on refresh:", err);
         }
       } else {
         setUser(null);
@@ -88,25 +107,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    // Mock authentication - in real app, this would call an API
-    const usercred = await signInWithEmailAndPassword(auth, email, password);
-    const firebaseuser = usercred.user;
-    const res = await axiosInstance.get("/loggedinuser", {
-      params: { email: firebaseuser.email },
-    });
-    if (res.data) {
-      setUser(res.data);
-      localStorage.setItem("twitter-user", JSON.stringify(res.data));
+    console.log("starting login.......");
+    try {
+      const usercred = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseuser = usercred.user;
+      console.log("firebase login successful");
+      
+      const res = await axiosInstance.get("/loggedinuser", {
+        params: { email: firebaseuser.email },
+      });
+      console.log("backend login successful", res.status);
+      
+      // NEW: Chrome OTP Check
+      if (res.status === 206 && res.data.requiresOtp) {
+        console.log("4. Hit the OTP Block! Opening Modal...");
+        setPendingOtpEmail(res.data.email);
+        setIsLoading(false);
+        return; // Stop here, wait for OtpModal
+      }
+      
+      if (res.data) {
+        console.log("4. Hit the Success Block! Redirecting...");
+        setUser(res.data);
+        localStorage.setItem("twitter-user", JSON.stringify(res.data));
+        
+        try {
+          await axiosInstance.post("/login-history", { userId: res.data._id });
+        } catch (historyErr) {
+          console.error("Failed to record login history", historyErr);
+        }
+        
+        router.push("/");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      if (axios.isAxiosError(error)) {
+        // Handles backend/MongoDB errors safely
+        alert(error.response?.data?.error || error.response?.data?.message || "Server Error");
+      } else if (error instanceof Error) {
+        // 🚨 NEW: Proves to TypeScript this is a standard Error (like Firebase)
+        alert(error.message);
+      } else {
+        // Ultimate fallback for completely unknown types
+        alert("An unknown error occurred");
+      }
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-    // const mockUser: User = {
-    //   id: '1',
-    //   username: 'johndoe',
-    //   displayName: 'John Doe',
-    //   avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400',
-    //   bio: 'Software developer passionate about building great products',
-    //   joinedDate: 'April 2024'
-    // };
-    setIsLoading(false);
   };
 
   const signup = async (
@@ -195,6 +243,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const res = await axiosInstance.get("/loggedinuser", {
           params: { email: firebaseuser.email },
         });
+
+        // If the backend sent a 206 status, it means Chrome was detected
+        if (res.status === 206 && res.data.requiresOtp) {
+          setPendingOtpEmail(res.data.email);
+          setIsLoading(false);
+          return; // Stop here, do not log them in yet!
+        }
+
+        // Otherwise, proceed as normal
+        if (res.data) {
+          setUser(res.data);
+          localStorage.setItem("twitter-user", JSON.stringify(res.data));
+          await axiosInstance.post("/login-history", { userId: res.data._id });
+        }
         userData = res.data;
       } catch (err: any) {
         const newuser: any = {
@@ -211,10 +273,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (userData) {
         setUser(userData);
         localStorage.setItem("twitter-user", JSON.stringify(userData));
+        
+        try {
+          await axiosInstance.post("/login-history", { userId: userData._id });
+        } catch (historyErr) {
+          console.error("Failed to record Google login history", historyErr);
+        }
+        
+        router.push("/");
+
       } else {
         throw new Error("Login/Register failed: No user data returned");
       }
     } catch (error: any) {
+      if (error?.code === 'auth/popup-closed-by-user') {
+        console.log("Popup closed. Awaiting user intent.");
+        return; // Exit the function quietly
+      }
+      // ==========================================
+
       console.error("Google Sign-In Error:", error);
       alert(error.response?.data?.message || error.message || "Login failed");
     } finally {
@@ -226,12 +303,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         login,
         signup,
         updateProfile,
         logout,
         isLoading,
         googlesignin,
+        pendingOtpEmail,
+        setPendingOtpEmail,
       }}
     >
       {children}
