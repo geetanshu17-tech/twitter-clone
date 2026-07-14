@@ -25,6 +25,9 @@ interface User {
   website: string;
   location: string;
   notificationEnabled?: boolean;
+  subscriptionPlan?: string;
+  planStartDate?: Date | string;
+  planExpiryDate?: Date | string;
 }
 
 interface AuthContextType {

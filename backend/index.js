@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
+import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import multer from "multer";
 import User from "./models/user.js";
@@ -8,10 +9,14 @@ import Tweet from "./models/tweet.js";
 import Notification from "./models/notification.js";
 import LoginHistory from "./models/loginHistory.js";
 import {UAParser} from "ua-parser-js";
+import Razorpay from "razorpay";
+import crypto from "crypto";
 
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import fs from "fs";
+
+
 
 // Read the JSON file safely
 const serviceAccount = JSON.parse(
@@ -28,6 +33,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 app.use(express.static("public")); // Serve static files from the "public" directory
 
 app.get("/", (req, res) => {
@@ -206,7 +215,40 @@ app.patch("/userupdate/:email", async (req, res) => {
 
 // POST a new tweet
 app.post("/post", async (req, res) => {
-  try {    
+  console.log("Incoming Tweet Payload:", req.body);
+  try {
+    //for task 4 subscription plan limit check    
+    const authorId = req.body.author;
+    
+    // 1. Find the user to check their current plan
+    const user = await User.findById(authorId);
+    if (!user) {
+      return res.status(404).json({ error: "Author not found" });
+    }
+
+    // 2. Count how many tweets this user has already posted
+    const tweetCount = await Tweet.countDocuments({ author: authorId });
+
+    // 3. Map out the limits according to your requirements
+    const planLimits = {
+      FREE: 1,
+      BRONZE: 3,
+      SILVER: 5,
+      GOLD: Infinity
+    };
+
+    // Safely get their plan (default to FREE if something is missing)
+    const userPlan = (user.subscriptionPlan || "FREE").toUpperCase();
+    const limit = planLimits[userPlan] || 1;
+
+    // 4. Block the post if they have hit their limit
+    if (tweetCount >= limit) {
+      return res.status(403).json({ 
+        error: `You've reached your ${userPlan} plan's posting limit. Upgrade your subscription to continue posting.` 
+      });
+    }
+    // ==========================================
+
     const formattedData = {
       author: req.body.author,
       content: req.body.content,
@@ -219,7 +261,7 @@ app.post("/post", async (req, res) => {
         duration: req.body.audioDuration,
         size: req.body.audioSize
       };
-    console.log("Formatted Tweet Data:", formattedData);
+      console.log("Formatted Tweet Data:", formattedData);
     }
 
     // Create the tweet
@@ -228,29 +270,24 @@ app.post("/post", async (req, res) => {
     const populatedTweet = await Tweet.findById(tweet._id).populate("author");
     
     // ==========================================
-    // BACKEND KEYWORD DETECTION & LOGGING
+    // BACKEND KEYWORD DETECTION & LOGGING (Task 1)
     // ==========================================
     const tweetText = tweet.content?.toLowerCase() || ""; 
     
     if (tweetText.includes("cricket") || tweetText.includes("science")) {
       console.log("🚨 [DEBUG] Keyword detected in tweet:", tweetText);
       
-      // Find ALL users who have notifications turned ON
       const usersToNotify = await User.find({ notificationEnabled: true });
       console.log(`🚨 [DEBUG] Found ${usersToNotify.length} users with notifications enabled.`);
 
-      // Create the notification objects
       const notifications = usersToNotify.map(targetUser => ({
         recipient: targetUser._id,
         message: `Keyword Alert: ${populatedTweet.author.displayName} posted: "${tweet.content}"`
       }));
 
-      // Save to database
       if (notifications.length > 0) {
         await Notification.insertMany(notifications);
         console.log(`🚨 [DEBUG] Successfully saved ${notifications.length} alerts to the database!`);
-      } else {
-        console.log("🚨 [DEBUG] Aborted saving: No users have notifications enabled right now.");
       }
     }
     // ==========================================
@@ -261,6 +298,156 @@ app.post("/post", async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 });
+
+
+//for task 4 subscription plan limit check
+
+// ==========================================
+// 1. CREATE RAZORPAY ORDER (Phase 1 & 3)
+// ==========================================
+app.post("/create-order", async (req, res) => {
+  try {
+    // PHASE 3: TIME RESTRICTION (10 AM to 11 AM IST)
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      hour12: false 
+    });
+    const currentHourIST = parseInt(formatter.format(new Date()));
+
+    // 🚨 NOTE FOR TESTING: Comment out these 3 lines if you are testing outside 10 AM - 11 AM!
+    if (currentHourIST !== 10) {
+       return res.status(403).json({ error: "Payments are only accepted between 10:00 AM and 11:00 AM IST." });
+    }
+
+    const { amount } = req.body; // Amount should be passed in INR
+
+    const options = {
+      amount: amount * 100, // Razorpay expects amount in paise (multiply by 100)
+      currency: "INR",
+      receipt: `receipt_${Date.now()}`
+    };
+
+    const order = await razorpay.orders.create(options);
+    res.status(200).json(order);
+  } catch (error) {
+    console.error("Order Creation Error:", error);
+    res.status(500).json({ error: "Failed to create order." });
+  }
+});
+
+// ==========================================
+// 2. VERIFY PAYMENT & UPGRADE PLAN (Phase 1 & 2)
+// ==========================================
+app.post("/verify-payment", async (req, res) => {
+  try {
+    const { 
+      razorpay_order_id, 
+      razorpay_payment_id, 
+      razorpay_signature, 
+      email, 
+      newPlan 
+    } = req.body;
+
+    // 1. Verify the signature securely
+    const sign = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSign = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(sign.toString())
+      .digest("hex");
+
+    if (razorpay_signature !== expectedSign) {
+      return res.status(400).json({ error: "Invalid payment signature!" });
+    }
+
+    // 2. Signature is valid -> Activate Subscription (Phase 2)
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const startDate = new Date();
+    const expiryDate = new Date();
+    expiryDate.setDate(startDate.getDate() + 30); // 30 days validity
+
+    user.subscriptionPlan = newPlan;
+    user.planStartDate = startDate;
+    user.planExpiryDate = expiryDate;
+    user.paymentStatus = "paid";
+
+    await user.save();
+
+
+    const amountPaid = newPlan === "BRONZE" ? 100 : newPlan === "SILVER" ? 300 : 1000;
+
+    try{
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: user.email,
+        subject: "Subscription Confirmed - Premium Receipt",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #3B82F6; text-align: center;">Subscription Confirmed!</h2>
+            <p>Hi <strong>${user.displayName}</strong>,</p>
+            <p>Thank you for upgrading your account. Your premium features are now active. Here are your invoice details:</p>
+            
+            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 5px 0;"><strong>Plan:</strong> ${newPlan}</p>
+              <p style="margin: 5px 0;"><strong>Amount:</strong> ₹${amountPaid}</p>
+              <p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${razorpay_payment_id}</p>
+              <p style="margin: 5px 0;"><strong>Payment Date:</strong> ${startDate.toLocaleDateString()}</p>
+              <p style="margin: 5px 0;"><strong>Valid Until:</strong> ${expiryDate.toLocaleDateString()}</p>
+            </div>
+            
+            <p style="text-align: center; color: #888; font-size: 12px;">© 2026 X Corp. All rights reserved.</p>
+          </div>
+        `,
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ [DEBUG] Invoice email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error("❌ [DEBUG] Failed to send invoice email:", emailError);
+    }
+
+    return res.status(200).json({
+      message: "Payment verified and plan upgraded successfully!",
+      user
+    });
+
+
+    } catch (error) {
+    console.error("Verification Error:", error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+    // Stretch Goal: Invoice Data Preparation for Day 16
+  //   const invoiceData = {
+  //     user: user.displayName,
+  //     email: user.email,
+  //     plan: newPlan,
+  //     amount: newPlan === "BRONZE" ? 100 : newPlan === "SILVER" ? 300 : 1000,
+  //     transactionId: razorpay_payment_id,
+  //     paymentDate: startDate,
+  //     expiryDate: expiryDate
+  //   };
+  //   console.log("Invoice Data Ready for Day 16:", invoiceData);
+
+  //   return res.status(200).json({ 
+  //     message: "Payment verified and plan upgraded successfully!", 
+  //     user 
+  //   });
+
+  // } catch (error) {
+  //   console.error("Verification Error:", error);
+  //   res.status(500).json({ error: "Internal server error." });
+  // }
 
 
 // app.delete("/post/:tweetid", async (req, res) => {
@@ -301,7 +488,7 @@ app.post("/like/:tweetid", async (req, res) => {
       tweet.likedBy.push(userId);
     } else {
       // User already liked it -> Remove Like (Unlike)
-      tweet.likes -= 1;
+      tweet.likes = Math.max(0, tweet.likes - 1); 
       tweet.likedBy.splice(userIndex, 1);
     }
     
@@ -470,8 +657,19 @@ app.post("/forgot-password", async (req, res) => {
         password: newPassword
       });
       console.log("Successfully synced new password to Firebase");
+      
     } catch (firebaseError) {
       console.error("Firebase Admin Error:", firebaseError);
+      
+      // Send specific, helpful messages back to the frontend
+      if (firebaseError.code === 'auth/user-not-found') {
+        return res.status(404).json({ error: "User not found in Firebase auth system." });
+      } 
+      if (firebaseError.code === 'auth/invalid-password') {
+        return res.status(400).json({ error: "Password must be at least 6 characters long." });
+      }
+      
+      // Fallback for any other Firebase issues
       return res.status(500).json({ error: "Failed to sync password with authentication provider." });
     }
     // ==========================================

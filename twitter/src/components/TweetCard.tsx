@@ -144,7 +144,7 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
     <article className="px-4 pt-3 pb-2 border-b border-gray-800 bg-black hover:bg-white/[0.02] transition-colors cursor-pointer w-full">
       <div className="flex space-x-3">
         {/* Avatar Section */}
-        <div className="flex-shrink-0 pt-1">
+        <div className="shrink-0 pt-1">
           <Avatar className="h-10 w-10">
             <AvatarImage src={tweetstate.author.avatar} alt={tweetstate.author.displayName} className="object-cover" />
             <AvatarFallback>{tweetstate.author.displayName[0]}</AvatarFallback>
@@ -159,20 +159,20 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
               </span>
 
               {tweetstate.author.verified && (
-                <div className="text-blue-500 flex-shrink-0 flex items-center justify-center">
+                <div className="text-blue-500 shrink-0 flex items-center justify-center">
                   <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
                     <g><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.918-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.337 2.25c-.416-.165-.866-.25-1.336-.25-2.21 0-3.918 1.792-3.918 3.998 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.46.74 2.746 1.867 3.45-.032.22-.05.443-.05.668 0 2.21 1.71 3.998 3.918 3.998.47 0 .92-.084 1.336-.25.52 1.334 1.818 2.25 3.337 2.25s2.816-.916 3.337-2.25c.416.166.866.25 1.336.25 2.21 0 3.918-1.792 3.918-3.998 0-.225-.018-.448-.05-.668 1.127-.704 1.867-1.99 1.867-3.45zm-11.16 4.083l-4.5-4.5 1.41-1.414 3.085 3.085 6.09-6.09 1.414 1.414-7.5 7.5z"></path></g>
                   </svg>
                 </div>
               )}
 
-              <span className="text-gray-500 truncate flex-shrink-0">
+              <span className="text-gray-500 truncate shrink-0">
                 @{tweetstate.author.username}
               </span>
 
-              <span className="text-gray-500 flex-shrink-0 px-1">·</span>
+              <span className="text-gray-500 shrink-0 px-1">·</span>
 
-              <span className="text-gray-500 hover:underline flex-shrink-0">
+              <span className="text-gray-500 hover:underline shrink-0">
                 {tweetstate.timestamp &&
                   new Date(tweetstate.timestamp).toLocaleDateString("en-us", {
                     month: "short",
@@ -201,7 +201,7 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
           </div>
 
           {/* Text Content */}
-          <div className="text-[15px] text-white mb-3 whitespace-pre-wrap break-words leading-snug">
+          <div className="text-[15px] text-white mb-3 whitespace-pre-wrap wrap-break-words leading-snug">
             {tweetstate.content}
           </div>
 
@@ -211,7 +211,7 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
               <img
                 src={tweetstate.image}
                 alt="Tweet attachment"
-                className="w-full h-auto max-h-[500px] object-cover"
+                className="w-full h-auto max-h-125 object-cover"
               />
             </div>
           )}
@@ -237,7 +237,7 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
             {/* Comment */}
             <button className="flex items-center group transition-colors hover:text-blue-500 outline-none">
               <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                <MessageCircle className="h-[18px] w-[18px]" />
+                <MessageCircle className="h-4.5 w-4.5" />
               </div>
               <span className="text-[13px] px-1">{formatNumber(tweetstate.comments || 0)}</span>
             </button>
@@ -248,7 +248,7 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
               className={`flex items-center group transition-colors outline-none ${isRetweet ? 'text-green-500' : 'hover:text-green-500'}`}
             >
               <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
-                <Repeat2 className="h-[18px] w-[18px]" />
+                <Repeat2 className="h-4.5 w-4.5" />
               </div>
               <span className="text-[13px] px-1">{formatNumber(tweetstate.retweets || 0)}</span>
             </button>

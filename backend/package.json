@@ -20,7 +20,9 @@
     "mongodb": "^7.4.0",
     "mongoose": "^9.7.2",
     "multer": "^2.2.0",
+    "nodemailer": "^9.0.3",
     "nodemon": "^3.1.14",
+    "razorpay": "^2.9.6",
     "ua-parser-js": "^2.0.10"
   }
 }

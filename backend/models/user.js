@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 const UserSchema = mongoose.Schema({
   username: { type: String, required: true },
   displayName: { type: String, required: true },
@@ -7,16 +8,39 @@ const UserSchema = mongoose.Schema({
   bio: { type: String, default: "" },
   location: { type: String, default: "" },
   website: { type: String, default: "" },
-  joinedDate: { type: Date, default: Date.now() },
+  
+  // Fixed the Date.now bug by removing ()
+  joinedDate: { type: Date, default: Date.now },
 
   notificationEnabled: { type: Boolean, default: false },
   selectedLanguage: { type: String, default: "en" },
-  subscriptionPlan: { type: String, default: "free" },
+  
+  // ==========================================
+  // SUBSCRIPTION FIELDS (Task 4)
+  // ==========================================
+  subscriptionPlan: { 
+    type: String, 
+    enum: ["FREE", "BRONZE", "SILVER", "GOLD"], // Strictly limits allowed values
+    default: "FREE" 
+  },
+  planStartDate: { 
+    type: Date, 
+    default: null 
+  },
+  planExpiryDate: { 
+    type: Date, 
+    default: null 
+  },
+  paymentStatus: { 
+    type: String, 
+    default: "none" // Can be updated to "paid", "pending", etc. when Razorpay is added
+  },
+  // ==========================================
 
   phone: { 
     type: String, 
     unique: true, 
-    sparse: true // sparse allows multiple users to have a 'null' phone number without throwing a unique error
+    sparse: true 
   },
   passwordResetCount: { 
     type: Number, 
@@ -28,7 +52,7 @@ const UserSchema = mongoose.Schema({
   },
 
   otp: { type: String, default: null },
-  otpExpiry: { type: Date, default: null }
+  otpExpiry: { type: Date, default: null } // I noticed you used otpExpires in index.js earlier, ensure these match!
 });
 
 export default mongoose.model("User", UserSchema);
