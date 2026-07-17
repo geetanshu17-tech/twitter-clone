@@ -87,4 +87,4 @@ firebase.tsx and firebaseServiceAccount.json are strictly excluded from this rep
 
 ## 🌐 Live Website Demo
 Frontend: https://twitter-clone-beta-eosin.vercel.app/
-Backend API: [Insert your deployed backend URL here]
+Backend API: [https://twitter-clone-24tp.onrender.com](https://twitter-clone-24tp.onrender.com)
