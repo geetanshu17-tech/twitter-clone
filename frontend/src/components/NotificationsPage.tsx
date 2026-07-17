@@ -4,9 +4,11 @@ import { Settings, ArrowLeft, Bell } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import axiosInstance from "@/lib/axiosInstance";
+import { useTranslation } from "react-i18next";
 
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   
   // -- UI State --
   const [activeTab, setActiveTab] = useState("all");
@@ -103,15 +105,15 @@ export default function NotificationsPage() {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold">Notification Settings</h1>
+          <h1 className="text-xl font-bold">{t("notificationsettings")}</h1>
         </div>
 
         <div className="p-4">
           <div className="flex items-center justify-between p-4 border border-gray-800 rounded-2xl hover:bg-white/5 transition-colors">
             <div>
-              <h2 className="text-[15px] font-bold">Keyword Push Notifications</h2>
+              <h2 className="text-[15px] font-bold">{t("Keyword Push Notifications")}</h2>
               <p className="text-[13px] text-gray-500 mt-1">
-                Get alerts when tweets contain "cricket" or "science".
+                {t("Keyword Push Notifications Desc")}
               </p>
             </div>
             <button
@@ -142,7 +144,7 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-gray-800">
         <div className="flex items-center justify-between p-4 pb-0">
-          <h1 className="text-xl font-bold">Notifications</h1>
+          <h1 className="text-xl font-bold">{t("notifications")}</h1>
           <button 
             onClick={() => setShowSettings(true)}
             className="p-2 hover:bg-white/10 rounded-full transition-colors"
@@ -158,7 +160,7 @@ export default function NotificationsPage() {
             className="flex-1 hover:bg-white/10 transition-colors relative"
           >
             <div className={`py-4 font-bold text-[15px] inline-block ${activeTab === "all" ? "text-white" : "text-gray-500"}`}>
-              All
+              {t("all")}
               {activeTab === "all" && (
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-1 w-12 bg-blue-500 rounded-full" />
               )}
@@ -169,7 +171,7 @@ export default function NotificationsPage() {
             className="flex-1 hover:bg-white/10 transition-colors relative"
           >
             <div className={`py-4 font-bold text-[15px] inline-block ${activeTab === "mentions" ? "text-white" : "text-gray-500"}`}>
-              Mentions
+              {t("mentions")}
               {activeTab === "mentions" && (
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-1 w-[70px] bg-blue-500 rounded-full" />
               )}
@@ -200,7 +202,7 @@ export default function NotificationsPage() {
                 onClick={handleClearNotifications}
                 className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[14px] font-bold rounded-full transition-colors"
               >
-                Clear All Notifications
+                {t("clearallnofications")}
               </button>
             </div>
 

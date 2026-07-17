@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Image, Smile, Calendar, MapPin, BarChart3, Globe, X, Mic } from "lucide-react"; // Added Mic icon
 import axiosInstance from "@/lib/axiosInstance";
+import { useTranslation } from 'react-i18next';
 
 const TweetComposer = ({ onTweetPosted }: any) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   
   // -- Existing State --
   const [content, setContent] = useState("");
@@ -247,10 +249,10 @@ const TweetComposer = ({ onTweetPosted }: any) => {
           <div className="flex-1">
             <form onSubmit={handleSubmit}>
               <Textarea
-                placeholder="What's happening?"
+                placeholder={t('whatsHappening')}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="bg-transparent border-none text-xl text-white placeholder-gray-500 resize-none min-h-[120px] focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="bg-transparent border-none text-xl text-white placeholder-gray-500 resize-none min-h-30 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
 
               {/* Image Preview */}
@@ -285,8 +287,6 @@ const TweetComposer = ({ onTweetPosted }: any) => {
                   <audio controls src={audioPreviewUrl} className="w-full h-10 outline-none rounded-full" />
                 </div>
               )}
-
-              {/* NEW: Audio Error Display */}
               {audioError && (
                 <div className="mt-2 text-red-500 text-sm font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/20">
                   {audioError}
@@ -347,7 +347,7 @@ const TweetComposer = ({ onTweetPosted }: any) => {
                   <div className="flex items-center space-x-2">
                     <Globe className="h-4 w-4 text-blue-400" />
                     <span className="text-sm text-blue-400 font-semibold">
-                      Everyone can reply
+                      {t("everyonecanreply")}
                     </span>
                   </div>
                   <div className="flex items-center space-x-3">

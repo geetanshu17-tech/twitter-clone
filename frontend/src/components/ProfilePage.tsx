@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
 import axiosInstance from "@/lib/axiosInstance";
 import LoginHistorySection from "@/app/login-history-profile/page";
@@ -26,6 +27,7 @@ import Editprofile from "./Editprofile";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState("posts");
   const [showEditModal, setShowEditModal] = useState(false);
@@ -123,9 +125,9 @@ export default function ProfilePage() {
           <Button
             onClick={() => setShowEditModal(true)}
             variant="outline"
-            className="rounded-full border-zinc-700 bg-black px-6 font-semibold text-white transition-all hover:bg-zinc-900"
+            className="rounded-full border-zinc-700 bg-black px-6 font-semibold text-white transition-all hover:bg-zinc-900 hover:text-white/80"
           >
-            Edit profile
+            {t("editProfile")}
           </Button>
         </div>
       </section>
@@ -188,13 +190,13 @@ export default function ProfilePage() {
           <button className="group">
             <span className="font-bold text-white">245</span>
             <span className="ml-1 text-zinc-500 group-hover:underline">
-              Following
+              {t("following")}
             </span>
           </button>
           <button className="group">
             <span className="font-bold text-white">1.3K</span>
             <span className="ml-1 text-zinc-500 group-hover:underline">
-              Followers
+              {t("followers")}
             </span>
           </button>
         </div>
@@ -249,7 +251,7 @@ export default function ProfilePage() {
               data-[state=active]:after:bg-sky-500
             "
           >
-            Posts
+            {t('posts')}
           </TabsTrigger>
           <TabsTrigger
             value="replies"
@@ -260,7 +262,7 @@ export default function ProfilePage() {
               data-[state=active]:after:bg-sky-500
             "
           >
-            Replies
+            {t('replies')}
           </TabsTrigger>
           <TabsTrigger
             value="highlights"
@@ -271,7 +273,7 @@ export default function ProfilePage() {
               data-[state=active]:after:bg-sky-500
             "
           >
-            Highlights
+            {t('highlights')}
           </TabsTrigger>
           <TabsTrigger
             value="articles"
@@ -282,7 +284,7 @@ export default function ProfilePage() {
               data-[state=active]:after:bg-sky-500
             "
           >
-            Articles
+            {t('articles')}
           </TabsTrigger>
           <TabsTrigger
             value="media"
@@ -293,7 +295,7 @@ export default function ProfilePage() {
               data-[state=active]:after:bg-sky-500
             "
           >
-            Media
+            {t('media')}
           </TabsTrigger>
           <TabsTrigger
             value="security"
@@ -304,7 +306,7 @@ export default function ProfilePage() {
               data-[state=active]:after:bg-sky-500
             "
           >
-            Security
+            {t('security')}
           </TabsTrigger>
         </TabsList>
 

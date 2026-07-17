@@ -6,8 +6,10 @@ import LoadingSpinner from "./loading-spinner";
 import TweetCard from "./TweetCard";
 import TweetComposer from "./TweetComposer";
 import axiosInstance from "@/lib/axiosInstance";
+import { useTranslation } from "react-i18next";
 
 const Feed = () => {
+  const { t } = useTranslation();
   const [tweets, setTweets] = useState<any[]>([]);
   const [loading, setloading] = useState(false);
 
@@ -44,7 +46,7 @@ const Feed = () => {
               className="group relative flex-1 h-full rounded-none bg-transparent  hover:text-white text-gray-500 hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none outline-none cursor-pointer transition-colors"
             >
               <div className="relative inline-flex h-full items-center justify-center font-bold text-[15px]">
-                For you
+                {t('foryou')}
                 
                 <div className="absolute bottom-0 left-0 right-0 hidden h-[4px] rounded-t-full bg-blue-500 group-data-[state=active]:block" />
               </div>
@@ -55,7 +57,7 @@ const Feed = () => {
               className="group relative flex-1 h-full rounded-none bg-transparent hover:text-white text-gray-500 hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none outline-none cursor-pointer transition-colors"
             >
               <div className="relative inline-flex h-full items-center justify-center font-bold text-[15px]">
-                Following
+                {t('following')}
                 <div className="absolute bottom-0 left-0 right-0 hidden h-[4px] rounded-t-full bg-blue-500 group-data-[state=active]:block" />
               </div>
             </TabsTrigger>

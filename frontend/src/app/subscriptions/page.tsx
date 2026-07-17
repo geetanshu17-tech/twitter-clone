@@ -1,55 +1,60 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Check, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import axiosInstance from "@/lib/axiosInstance";
+import "@/i18n";
+import { useTranslation } from "react-i18next";
 
-const plans = [
-  {
-    name: "FREE",
-    price: "₹0",
-    period: "/ forever",
-    limit: "1 Tweet",
-    features: ["Basic support", "Standard profile", "1 Post total"],
-    color: "text-gray-400",
-    bgColor: "bg-gray-800",
-  },
-  {
-    name: "BRONZE",
-    price: "₹100",
-    period: "/ month",
-    limit: "3 Tweets",
-    features: ["Priority support", "3 Posts per month", "Ad-free experience"],
-    color: "text-amber-600",
-    bgColor: "bg-amber-600/10",
-  },
-  {
-    name: "SILVER",
-    price: "₹300",
-    period: "/ month",
-    limit: "5 Tweets",
-    features: ["24/7 Priority support", "5 Posts per month", "Verified badge"],
-    color: "text-slate-300",
-    bgColor: "bg-slate-300/10",
-  },
-  {
-    name: "GOLD",
-    price: "₹1000",
-    period: "/ month",
-    limit: "Unlimited",
-    features: ["Dedicated manager", "Unlimited Posts", "Premium features early access"],
-    color: "text-yellow-400",
-    bgColor: "bg-yellow-400/10",
-  },
-];
+
 
 export default function SubscriptionPage() {
   const { user, setUser } = useAuth();
+  const { t } = useTranslation();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const plans = useMemo(() => [
+    {
+      name: "FREE",
+      price: "₹0",
+      period: t('perForever'),
+      limit: t('limit1'),
+      features: [t('featBasic'), t('featStandard'), t('feat1Post')],
+      color: "text-gray-400",
+      bgColor: "bg-gray-800",
+    },
+    {
+      name: "BRONZE",
+      price: "₹100",
+      period: t('perMonth'),
+      limit: t('limit3'),
+      features: [t('featPriority'), t('feat3Posts'), t('featAdFree')],
+      color: "text-amber-600",
+      bgColor: "bg-amber-600/10",
+    },
+    {
+      name: "SILVER",
+      price: "₹300",
+      period: t('perMonth'),
+      limit: t('limit5'),
+      features: [t('feat247'), t('feat5Posts'), t('featVerified')],
+      color: "text-slate-300",
+      bgColor: "bg-slate-300/10",
+    },
+    {
+      name: "GOLD",
+      price: "₹1000",
+      period: t('perMonth'),
+      limit: t('limitUnlimited'),
+      features: [t('featDedicated'), t('featUnlimited'), t('featEarlyAccess')],
+      color: "text-yellow-400",
+      bgColor: "bg-yellow-400/10",
+    },
+  ], [t]);
   
   const currentPlan = ((user as any)?.subscriptionPlan || "FREE").toUpperCase();
 
@@ -154,12 +159,12 @@ export default function SubscriptionPage() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <span className="text-xl font-bold">Back to Home</span>
+          <span className="text-xl font-bold">{t("backToHome")}</span>
         </div>
 
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Choose Your Premium Plan</h1>
-          <p className="text-gray-400">Unlock more tweets and exclusive features.</p>
+          <h1 className="text-4xl font-bold mb-4">{t("choosePremium")}</h1>
+          <p className="text-gray-400">{t("unlockMore")}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -174,7 +179,7 @@ export default function SubscriptionPage() {
               >
                 {isCurrentPlan && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    CURRENT PLAN
+                    {t("currentPlanBadge")}
                   </div>
                 )}
 
@@ -213,7 +218,7 @@ export default function SubscriptionPage() {
                         : 'bg-white text-black hover:bg-zinc-200'
                     }`}
                   >
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : isCurrentPlan ? 'Active' : 'Upgrade'}
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : isCurrentPlan ? t('active') : t('upgradeBtn')}
                   </Button>
                 </CardContent>
               </Card>

@@ -1,12 +1,15 @@
 "use client";
 
 import { Search } from 'lucide-react';
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
+import axiosInstance from '@/lib/axiosInstance';
 
 const suggestions = [
   {
@@ -34,6 +37,53 @@ const suggestions = [
 
 export default function RightSidebar() {
   const { user } = useAuth();
+  const { t } = useTranslation();
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [pendingLanguage, setPendingLanguage] = useState("");
+  const [otpInput, setOtpInput] = useState("");
+  const [otpError, setOtpError] = useState("");
+
+  const handleLanguageSelect = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedLang = e.target.value;
+    if (!user) return; 
+    setPendingLanguage(selectedLang); 
+    
+    try {
+      // 3. Cast user as 'any' to bypass the TypeScript red lines
+      const currentUser = user as any; 
+
+      await axiosInstance.post("/send-language-otp", { 
+        targetLanguage: selectedLang,
+        email: currentUser.email,
+        phone: currentUser.phone 
+      });
+      
+      // 4. Open the modal for them to type the code
+      setShowOtpModal(true);
+    } catch (error) {
+      console.error("Failed to trigger OTP");
+    }
+  };
+  const handleVerifyLanguageOtp = async () => {
+    setOtpError("");
+    try {
+      const currentUser = user as any;
+      
+      // Hit your existing verify route
+      await axiosInstance.post("/verify-otp", {
+        email: currentUser.email,
+        otp: otpInput
+      });
+
+      // 🚨 SUCCESS! Change the language and close modal
+      i18n.changeLanguage(pendingLanguage);
+      setShowOtpModal(false);
+      setOtpInput("");
+      
+    } catch (err: any) {
+      setOtpError("Invalid OTP. Please try again.");
+    }
+  };
 
   // --- Subscription Logic ---
   const currentUser = user as any; // Using the quick bypass for Vercel
@@ -57,7 +107,7 @@ export default function RightSidebar() {
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5 group-focus-within:text-blue-500 transition-colors" />
           <Input
-            placeholder="Search"
+            placeholder={t('search')}
             className="pl-12 bg-[#202327] border border-transparent focus:border-blue-500 focus:bg-black text-white placeholder-gray-500 rounded-full py-5 h-11 transition-colors outline-none ring-0 focus-visible:ring-0"
           />
         </div>
@@ -66,35 +116,34 @@ export default function RightSidebar() {
       {/* Conditional Premium Card */}
       {isPremium ? (
         <div className="bg-[#16181c] rounded-2xl p-4 border border-[#16181c] relative overflow-hidden">
-          {/* Subtle glow effect for premium feel */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
           <div className="relative z-10">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-[#e7e9ea] text-xl font-extrabold">Your Premium</h3>
+              <h3 className="text-[#e7e9ea] text-xl font-extrabold">{t('yourPremium')}</h3>
               <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Active
+                {t('active')}
               </span>
             </div>
             <p className="text-gray-400 text-[14px] mb-4">
-              Plan: <span className="text-blue-500 font-bold">{currentPlan}</span><br/>
-              Valid until: <span className="text-white">{formattedExpiry}</span>
+              {t('plan')}: <span className="text-blue-500 font-bold">{currentPlan}</span><br/>
+              {t('validUntil')}: <span className="text-white">{formattedExpiry}</span>
             </p>
             <Link href="/subscriptions">
               <Button className="bg-white hover:bg-gray-200 text-black font-bold rounded-full px-5 py-2 h-auto text-[15px] w-full transition-colors">
-                Manage Plan
+                {t('managePlan')}
               </Button>
             </Link>
           </div>
         </div>
       ) : (
         <div className="bg-[#16181c] rounded-2xl p-4 border border-[#16181c]">
-          <h3 className="text-[#e7e9ea] text-xl font-extrabold mb-2">Subscribe to Premium</h3>
+          <h3 className="text-[#e7e9ea] text-xl font-extrabold mb-2">{t('subscribePremium')}</h3>
           <p className="text-white text-[15px] mb-3 leading-snug font-medium">
-            Subscribe to unlock new features and if eligible, receive a share of revenue.
+            {t('subscribeDesc')}
           </p>
           <Link href="/subscriptions">
             <Button className="bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-full px-5 py-2 h-auto text-[15px] w-full">
-              Subscribe
+              {t('subscribe')}
             </Button>
           </Link>
         </div>
@@ -102,7 +151,7 @@ export default function RightSidebar() {
 
       {/* Who to follow */}
       <div className="bg-[#16181c] rounded-2xl pt-4 border border-[#16181c]">
-        <h3 className="text-[#e7e9ea] text-xl font-extrabold mb-4 px-4">Who to follow</h3>
+        <h3 className="text-[#e7e9ea] text-xl font-extrabold mb-4 px-4">{t('whoToFollow')}</h3>
         <div className="flex flex-col">
           {suggestions.map((user) => (
             <div key={user.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.03] transition-colors w-full text-left cursor-pointer">
@@ -129,28 +178,87 @@ export default function RightSidebar() {
                 variant="outline"
                 className="bg-[#eff3f4] text-[#0f1419] hover:bg-[#d7dbdc] font-bold rounded-full px-4 h-8 ml-2 border-none transition-colors"
               >
-                Follow
+                {t('follow')}
               </Button>
             </div>
           ))}
         </div>
         <button className="w-full text-left px-4 py-4 text-blue-500 hover:bg-white/[0.03] rounded-b-2xl transition-colors text-[15px]">
-          Show more
+          {t('Show more')}
         </button>
+      </div>
+
+      {/* --- Language Selector --- */}
+      <div className="bg-[#16181c] rounded-2xl p-4 border border-[#16181c]">
+        <h3 className="text-[#e7e9ea] text-xl font-extrabold mb-3">{t('language') || 'Language'}</h3>
+        <select 
+          value={i18n.resolvedLanguage} 
+          onChange={handleLanguageSelect} // <-- Updated this line!
+          className="w-full bg-black text-white p-3 rounded-xl border border-zinc-700 outline-none focus:border-sky-500 appearance-none cursor-pointer"
+        >
+          <option value="en">English</option>
+          <option value="hi">हिन्दी (Hindi)</option>
+          <option value="es">Español (Spanish)</option>
+          <option value="pt">Português (Portuguese)</option>
+          <option value="zh">中文 (Chinese)</option>
+          <option value="fr">Français (French)</option>
+          <option value="de">Deutsch (German)</option>
+          <option value="ja">日本語 (Japanese)</option>
+        </select>
       </div>
 
       {/* Footer */}
       <div className="px-4 text-[13px] text-gray-500 space-y-1">
         <div className="flex flex-wrap gap-x-3 gap-y-1">
-          <a href="#" className="hover:underline">Terms of Service</a>
-          <a href="#" className="hover:underline">Privacy Policy</a>
-          <a href="#" className="hover:underline">Cookie Policy</a>
-          <a href="#" className="hover:underline">Accessibility</a>
-          <a href="#" className="hover:underline">Ads info</a>
-          <a href="#" className="hover:underline">More ...</a>
+          <a href="#" className="hover:underline">{t('termsOfService')}</a>
+          <a href="#" className="hover:underline">{t('privacyPolicy')}</a>
+          <a href="#" className="hover:underline">{t('cookiePolicy')}</a>
+          <a href="#" className="hover:underline">{t('accessibility')}</a>
+          <a href="#" className="hover:underline">{t('adsInfo')}</a>
+          <a href="#" className="hover:underline">{t('more')}</a>
         </div>
         <div>© 2026 X Corp.</div>
       </div>
+
+      {/* ================= OTP MODAL ================= */}
+      {showOtpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-[#16181c] p-6 border border-zinc-800 shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-2">Verify Language Change</h2>
+            <p className="text-sm text-zinc-400 mb-4">
+              Enter the 6-digit code sent to you to confirm this change.
+            </p>
+
+            <input
+              type="text"
+              maxLength={6}
+              value={otpInput}
+              onChange={(e) => setOtpInput(e.target.value)}
+              placeholder="Enter OTP"
+              className="w-full rounded-lg border border-zinc-700 bg-black p-3 text-center text-xl tracking-widest text-white focus:border-sky-500 focus:outline-none mb-3"
+            />
+            
+            {otpError && <p className="text-red-500 text-sm text-center mb-3">{otpError}</p>}
+
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowOtpModal(false)}
+                className="flex-1 rounded-full border-zinc-700 bg-transparent text-white hover:bg-zinc-900"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleVerifyLanguageOtp}
+                disabled={otpInput.length < 6}
+                className="flex-1 rounded-full bg-white text-black hover:bg-zinc-200 font-bold"
+              >
+                Verify
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

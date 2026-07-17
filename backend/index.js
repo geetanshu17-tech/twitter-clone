@@ -123,7 +123,6 @@ app.get("/loggedinuser", async (req, res) => {
       user.otpExpires = new Date(Date.now() + 5 * 60000); 
       await user.save();
 
-      // IMPORTANT FOR DEV: Printing to terminal so you can test instantly without setting up email servers yet
       console.log(`\n🚨 [OTP GENERATED FOR CHROME] Email: ${user.email} | OTP: ${generatedOtp}\n`);
 
       // 206 Partial Content tells the frontend to show the OTP screen
@@ -152,7 +151,6 @@ app.post("/verify-otp", async (req, res) => {
       return res.status(401).json({ error: "Invalid or expired OTP." });
     }
 
-    // Success! Clear the OTP from the database
     user.otp = null;
     user.otpExpires = null;
     await user.save();
@@ -179,7 +177,6 @@ app.post("/generate-audio-otp", async (req, res) => {
     user.otpExpires = new Date(Date.now() + 5 * 60000); // Expires in 5 minutes
     await user.save();
 
-    // Log to terminal for easy testing
     console.log(`\n🚨 [AUDIO OTP GENERATED] Email: ${user.email} | OTP: \n ${generatedOtp}\n`);
 
     return res.status(200).json({ message: "OTP generated successfully." });
@@ -196,7 +193,7 @@ app.patch("/userupdate/:email", async (req, res) => {
     const updated = await User.findOneAndUpdate(
       { email },
       { $set: req.body },
-      { returnDocument: 'after', upsert: false } // <--- Fixed
+      { returnDocument: 'after', upsert: false }
     );
     
     if (!updated) {
@@ -217,19 +214,14 @@ app.patch("/userupdate/:email", async (req, res) => {
 app.post("/post", async (req, res) => {
   console.log("Incoming Tweet Payload:", req.body);
   try {
-    //for task 4 subscription plan limit check    
     const authorId = req.body.author;
     
-    // 1. Find the user to check their current plan
     const user = await User.findById(authorId);
     if (!user) {
       return res.status(404).json({ error: "Author not found" });
     }
-
-    // 2. Count how many tweets this user has already posted
     const tweetCount = await Tweet.countDocuments({ author: authorId });
 
-    // 3. Map out the limits according to your requirements
     const planLimits = {
       FREE: 1,
       BRONZE: 3,
@@ -241,7 +233,6 @@ app.post("/post", async (req, res) => {
     const userPlan = (user.subscriptionPlan || "FREE").toUpperCase();
     const limit = planLimits[userPlan] || 1;
 
-    // 4. Block the post if they have hit their limit
     if (tweetCount >= limit) {
       return res.status(403).json({ 
         error: `You've reached your ${userPlan} plan's posting limit. Upgrade your subscription to continue posting.` 
@@ -300,7 +291,6 @@ app.post("/post", async (req, res) => {
 });
 
 
-//for task 4 subscription plan limit check
 
 // ==========================================
 // 1. CREATE RAZORPAY ORDER (Phase 1 & 3)
@@ -315,15 +305,14 @@ app.post("/create-order", async (req, res) => {
     });
     const currentHourIST = parseInt(formatter.format(new Date()));
 
-    // 🚨 NOTE FOR TESTING: Comment out these 3 lines if you are testing outside 10 AM - 11 AM!
     if (currentHourIST !== 10) {
        return res.status(403).json({ error: "Payments are only accepted between 10:00 AM and 11:00 AM IST." });
     }
 
-    const { amount } = req.body; // Amount should be passed in INR
+    const { amount } = req.body; 
 
     const options = {
-      amount: amount * 100, // Razorpay expects amount in paise (multiply by 100)
+      amount: amount * 100, 
       currency: "INR",
       receipt: `receipt_${Date.now()}`
     };
@@ -427,46 +416,64 @@ app.post("/verify-payment", async (req, res) => {
     res.status(500).json({ error: "Internal server error." });
   }
 });
-    // Stretch Goal: Invoice Data Preparation for Day 16
-  //   const invoiceData = {
-  //     user: user.displayName,
-  //     email: user.email,
-  //     plan: newPlan,
-  //     amount: newPlan === "BRONZE" ? 100 : newPlan === "SILVER" ? 300 : 1000,
-  //     transactionId: razorpay_payment_id,
-  //     paymentDate: startDate,
-  //     expiryDate: expiryDate
-  //   };
-  //   console.log("Invoice Data Ready for Day 16:", invoiceData);
-
-  //   return res.status(200).json({ 
-  //     message: "Payment verified and plan upgraded successfully!", 
-  //     user 
-  //   });
-
-  // } catch (error) {
-  //   console.error("Verification Error:", error);
-  //   res.status(500).json({ error: "Internal server error." });
-  // }
 
 
-// app.delete("/post/:tweetid", async (req, res) => {
-//   try {
-//     const deletedTweet = await Tweet.findByIdAndDelete(req.params.tweetid);
-//     if (!deletedTweet) {
-//       return res.status(404).json({ error: "Tweet not found" });
-//     }
-//     return res.status(200).json({ message: "Tweet deleted successfully" });
-//   } catch (error) {
-//     return res.status(400).json({ error: error.message });
-//   }
-// });
+// ==========================================
+// SEND LANGUAGE OTP (Phase 1)
+// ==========================================
+app.post("/send-language-otp", async (req, res) => {
+  const { email, phone, targetLanguage } = req.body;
+
+  try {
+    // 1. Find the user to attach the OTP to their database record
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // 2. Generate a 6-digit OTP and save it to the database
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = generatedOtp;
+    user.otpExpires = new Date(Date.now() + 5 * 60000); // 5 minutes validity
+    await user.save();
+
+    // 3. Route the OTP based on the requested language
+    if (targetLanguage === 'fr') {
+      // 🇫🇷 FRENCH: Send Email OTP using your existing Nodemailer setup
+      try {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+          }
+        });
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: "Language Verification Code",
+          html: `<p>Your verification code to change your language to French is: <strong>${generatedOtp}</strong></p>`
+        });
+        console.log(`✅ [DEBUG] French Language OTP sent to ${email}`);
+      } catch (emailErr) {
+        console.error("Nodemailer error:", emailErr);
+        // Fallback to terminal if email fails during dev
+        console.log(`\n🚨 [FALLBACK EMAIL OTP] Email: ${email} | OTP: ${generatedOtp}\n`);
+      }
+    } else {
+      console.log(`\n🚨 [MOBILE OTP GENERATED] Phone: ${phone || 'N/A'} | Target: ${targetLanguage.toUpperCase()} | OTP: ${generatedOtp}\n`);
+    }
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    console.error("OTP Sending Error:", error);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
 
 // GET all tweets
 app.get("/post", async (req, res) => {
   try {
     const tweets = await Tweet.find().sort({ timestamp: -1 }).populate("author");
-    return res.status(200).json(tweets); // ✅ Standardized to .json()
+    return res.status(200).json(tweets); 
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -483,11 +490,9 @@ app.post("/like/:tweetid", async (req, res) => {
     
     const userIndex = tweet.likedBy.indexOf(userId);
     if (userIndex === -1) {
-      // User hasn't liked it yet -> Add Like
       tweet.likes += 1;
       tweet.likedBy.push(userId);
     } else {
-      // User already liked it -> Remove Like (Unlike)
       tweet.likes = Math.max(0, tweet.likes - 1); 
       tweet.likedBy.splice(userIndex, 1);
     }
@@ -602,7 +607,7 @@ app.delete("/notifications/clear", async (req, res) => {
 
 // 1. Password Generator Utility (A-Z, a-z, 0-9, Symbols)
 const generateCustomPassword = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   let password = '';
   for (let i = 0; i < 12; i++) {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -785,6 +790,24 @@ const upload = multer({
 // 4. The actual POST route for the frontend to hit
 app.post("/upload/audio", upload.single("audio"), (req, res) => {
   try {
+    // ==========================================
+    // TASK 2: TIME RESTRICTION (2:00 PM to 7:00 PM IST)
+    // ==========================================
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      hour12: false 
+    });
+    const currentHourIST = parseInt(formatter.format(new Date()));
+
+    // 14 = 2:00 PM, 19 = 7:00 PM
+    if (currentHourIST < 14 || currentHourIST >= 19) {
+      return res.status(403).json({ 
+        error: "Audio uploads are restricted. You can only post audio tweets between 2:00 PM and 7:00 PM IST." 
+      });
+    }
+    // ==========================================
+
     if (!req.file) {
       return res.status(400).json({ error: "No audio file uploaded." });
     }

@@ -2,20 +2,17 @@
 import { useEffect, useState } from "react";
 import axiosInstance from "../../lib/axiosInstance";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 export default function LoginHistorySection() {
   const { user } = useAuth();
   const [history, setHistory] = useState<any[]>([]);
-
-  console.log("1. Current User Object:", user);
-  console.log("2. User ID:", user?._id);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (user?._id) {
-      console.log("3. Making API Call to Backend..."); // AND THIS LINE
       axiosInstance.get(`/login-history/${user._id}`)
         .then((res) => {
-          console.log("4. Data Received:", res.data); // AND THIS LINE
           setHistory(res.data);
         })
         .catch((err) => console.error("Failed to fetch history", err));
@@ -24,12 +21,12 @@ export default function LoginHistorySection() {
 
   return (
     <div className="mt-8 border-t border-gray-700 pt-6">
-      <h2 className="text-xl font-bold mb-4">Security</h2>
-      <h3 className="text-md text-gray-400 mb-4">Recent Logins</h3>
+      <h2 className="text-xl font-bold mb-4">{t("security")}</h2>
+      <h3 className="text-md text-gray-400 mb-4">{t("recentLogins")}</h3>
       
       <div className="space-y-4">
         {history.length === 0 ? (
-          <p className="text-sm text-gray-500">(No records yet)</p>
+          <p className="text-sm text-gray-500">{t("noRecordsYet")}</p>
         ) : (
           history.map((record) => (
             <div key={record._id} className="bg-gray-800 p-4 rounded-lg flex justify-between items-center">

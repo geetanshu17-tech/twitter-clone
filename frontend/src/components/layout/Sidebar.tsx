@@ -11,6 +11,9 @@ import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import TwitterLogo from '../Twitterlogo';
 import { useAuth } from '@/context/AuthContext';
+import axiosInstance from '@/lib/axiosInstance';
+
+import { useTranslation } from 'react-i18next';
 
 interface SidebarProps {
   currentPage?: string;
@@ -19,6 +22,7 @@ interface SidebarProps {
 
 export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarProps) {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
 
   const [unreadCount, setUnreadCount] = useState(0);
   const prevCountRef = useRef(0);
@@ -26,9 +30,10 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
 
   useEffect(() => {
     const fetchBadgeCount = async () => {
-      if (!user) return;
+      if (!user || !user.email) return;
       try {
-        const res = await axios.get(`http://localhost:5000/notifications/${user.email}`);
+        const res = await axiosInstance.get(`/notifications/${user.email}`);
+        
         const fetchedNotifications = res.data;
         const currentCount = fetchedNotifications.length;
 
@@ -59,13 +64,13 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
   }, [user]);
 
   const navigation = [
-    { name: 'Home', icon: Home, current: currentPage === 'home', page: 'home' },
-    { name: 'Explore', icon: Search, current: currentPage === 'explore', page: 'explore' },
-    { name: 'Notifications', icon: Bell, current: currentPage === 'notifications', page: 'notifications', badgeCount: unreadCount },
-    { name: 'Messages', icon: Mail, current: currentPage === 'messages', page: 'messages' },
-    { name: 'Bookmarks', icon: Bookmark, current: currentPage === 'bookmarks', page: 'bookmarks' },
-    { name: 'Profile', icon: User, current: currentPage === 'profile', page: 'profile' },
-    { name: 'More', icon: MoreHorizontal, current: currentPage === 'more', page: 'more' },
+    { name: t('home'), icon: Home, current: currentPage === 'home', page: 'home' },
+    { name: t('explore'), icon: Search, current: currentPage === 'explore', page: 'explore' },
+    { name: t('notifications'), icon: Bell, current: currentPage === 'notifications', page: 'notifications', badgeCount: unreadCount },
+    { name: t('messages'), icon: Mail, current: currentPage === 'messages', page: 'messages' },
+    { name: t('bookmarks'), icon: Bookmark, current: currentPage === 'bookmarks', page: 'bookmarks' },
+    { name: t('profile'), icon: User, current: currentPage === 'profile', page: 'profile' },
+    { name: t('more'), icon: MoreHorizontal, current: currentPage === 'more', page: 'more' },
   ];
 
   return (
@@ -102,7 +107,7 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
         
         <div className="mt-4 px-2 w-full flex justify-center md:justify-start">
           <Button className="hidden md:flex w-[90%] items-center justify-center bg-blue-500 hover:bg-blue-600 text-white font-bold h-14 rounded-full text-lg transition-colors shadow-sm">
-            Post
+            {t('post')}
           </Button>
           {/* Mobile Post Button */}
           <Button className="md:hidden bg-blue-500 hover:bg-blue-600 text-white rounded-full h-12 w-12 p-0 flex items-center justify-center mt-2 shadow-sm">
@@ -131,13 +136,13 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-[260px] bg-black border border-gray-800 shadow-[0_0_15px_rgba(255,255,255,0.2)] rounded-2xl mb-2">
               <DropdownMenuItem className="text-white font-bold text-[15px] p-3 hover:bg-white/5 cursor-pointer">
-                Add an existing account
+                {t('addAccount')}
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className="text-white font-bold text-[15px] p-3 hover:bg-white/5 cursor-pointer"
                 onClick={logout}
               >
-                Log out @{user.username}
+                {t('logout')} @{user.username}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
