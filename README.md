@@ -19,7 +19,7 @@ A modern, full-stack social media web application inspired by X (formerly Twitte
 * **Localization:** `react-i18next`
 * **Icons:** [Lucide React](https://lucide.dev/)
 * **HTTP Client:** Axios
-* **imgbb: ** for images of profile (its api)
+* **imgbb:** for images of profile (its api)
 
 **Backend & Database:**
 * **Runtime:** [Node.js](https://nodejs.org/) & [Express.js](https://expressjs.com/)
