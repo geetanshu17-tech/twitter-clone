@@ -19,7 +19,7 @@ A modern, full-stack social media web application inspired by X (formerly Twitte
 * **Localization:** `react-i18next`
 * **Icons:** [Lucide React](https://lucide.dev/)
 * **HTTP Client:** Axios
-* **imgbb: ** for images of profile (its api)
+* **imgbb:** for images of profile (its api)
 
 **Backend & Database:**
 * **Runtime:** [Node.js](https://nodejs.org/) & [Express.js](https://expressjs.com/)
@@ -32,7 +32,7 @@ A modern, full-stack social media web application inspired by X (formerly Twitte
 
 ### 1. Clone the repository
 ```bash
-git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
+git clone https://github.com/geetanshu17-tech/twitter-clone.git
 cd your-repo-name
 ```
 
@@ -87,4 +87,4 @@ firebase.tsx and firebaseServiceAccount.json are strictly excluded from this rep
 
 ## 🌐 Live Website Demo
 Frontend: https://twitter-clone-beta-eosin.vercel.app/
-Backend API: [Insert your deployed backend URL here]
+Backend API: [https://twitter-clone-24tp.onrender.com](https://twitter-clone-24tp.onrender.com)
