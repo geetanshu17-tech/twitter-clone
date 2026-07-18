@@ -18,12 +18,25 @@ import fs from "fs";
 
 
 
-// Read the JSON file safely
-const serviceAccount = JSON.parse(
-  fs.readFileSync(new URL("./firebaseServiceAccount.json", import.meta.url))
-);
+// // Read the JSON file safely
+// const serviceAccount = JSON.parse(
+//   fs.readFileSync(new URL("./firebaseServiceAccount.json", import.meta.url))
+// );
 
-// Initialize Firebase Admin
+// // Initialize Firebase Admin
+// initializeApp({
+//   credential: cert(serviceAccount)
+// });
+
+let serviceAccount;
+if (process.env.FIREBASE_CREDENTIALS) {
+  serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+} else {
+  serviceAccount = JSON.parse(
+    fs.readFileSync(new URL("./firebaseServiceAccount.json", import.meta.url))
+  );
+}
+
 initializeApp({
   credential: cert(serviceAccount)
 });
@@ -369,11 +382,14 @@ app.post("/verify-payment", async (req, res) => {
 
     try{
       const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS
-        }
+        },
+        tls: { rejectUnauthorized: false }
       });
 
       const mailOptions = {
@@ -440,12 +456,15 @@ app.post("/send-language-otp", async (req, res) => {
       // 🇫🇷 FRENCH: Send Email OTP using your existing Nodemailer setup
       try {
         const transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-          }
-        });
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        },
+        tls: { rejectUnauthorized: false }
+      });
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
           to: email,
