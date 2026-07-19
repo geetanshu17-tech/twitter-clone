@@ -494,7 +494,30 @@ app.post("/send-language-otp", async (req, res) => {
 app.get("/post", async (req, res) => {
   try {
     const tweets = await Tweet.find().sort({ timestamp: -1 }).populate("author");
-    return res.status(200).json(tweets); 
+    
+    // Intercept the data and attach your Render domain to the audio URLs
+    const formattedTweets = tweets.map(tweet => {
+      // Convert the Mongoose document to a standard JavaScript object so we can edit it
+      const tweetObj = tweet.toObject(); 
+      
+      if (tweetObj.audio && tweetObj.audio.url) {
+        // 1. Clean up old mixed-content errors from localhost testing
+        if (tweetObj.audio.url.includes("localhost:5000")) {
+          tweetObj.audio.url = tweetObj.audio.url.replace(
+            "http://localhost:5000", 
+            "https://twitter-clone-24tp.onrender.com"
+          );
+        } 
+        // 2. Fix the 0:00/0:00 issue by converting relative Render paths to absolute URLs
+        else if (tweetObj.audio.url.startsWith("/")) {
+          tweetObj.audio.url = `https://twitter-clone-24tp.onrender.com${tweetObj.audio.url}`;
+        }
+      }
+      return tweetObj;
+    });
+
+    // Send the patched data to the Vercel frontend
+    return res.status(200).json(formattedTweets); 
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
