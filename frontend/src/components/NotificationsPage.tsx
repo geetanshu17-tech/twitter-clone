@@ -29,7 +29,7 @@ export default function NotificationsPage() {
     const fetchNotifications = async () => {
       if (!user) return;
       try {
-        const res = await axios.get(`http://localhost:5000/notifications/${user.email}`);
+        const res = await axios.get(`https://twitter-clone-24tp.onrender.com/notifications/${user.email}`);
         setNotifications(res.data);
       } catch (error) {
         console.error("Failed to fetch notifications", error);
@@ -64,7 +64,7 @@ export default function NotificationsPage() {
     setNotificationEnabled(newState);
 
     try {
-      await axios.patch(`http://localhost:5000/userupdate/${user.email}`, {
+      await axios.patch(`https://twitter-clone-24tp.onrender.com/userupdate/${user.email}`, {
         notificationEnabled: newState
       });
       console.log("Settings successfully saved to MongoDB!");
