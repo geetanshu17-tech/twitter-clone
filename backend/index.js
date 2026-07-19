@@ -389,7 +389,8 @@ app.post("/verify-payment", async (req, res) => {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS
         },
-        tls: { rejectUnauthorized: false }
+        tls: { rejectUnauthorized: false },
+        family: 4
       });
 
       const mailOptions = {
@@ -463,7 +464,8 @@ app.post("/send-language-otp", async (req, res) => {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS
         },
-        tls: { rejectUnauthorized: false }
+        tls: { rejectUnauthorized: false },
+        family: 4
       });
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
