@@ -382,15 +382,16 @@ app.post("/verify-payment", async (req, res) => {
 
     try{
       const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
+        host: '74.125.142.108',
         port: 587,
         secure: false,
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS
         },
-        tls: { rejectUnauthorized: false },
-        family: 4
+        tls: { rejectUnauthorized: false,
+          servername: 'smtp.gmail.com'
+         }
       });
 
       const mailOptions = {
@@ -457,15 +458,16 @@ app.post("/send-language-otp", async (req, res) => {
       // 🇫🇷 FRENCH: Send Email OTP using your existing Nodemailer setup
       try {
         const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
+        host: '74.125.142.108',
         port: 587,
         secure: false,
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS
         },
-        tls: { rejectUnauthorized: false },
-        family: 4
+        tls: { rejectUnauthorized: false,
+          servername: 'smtp.gmail.com'
+         }        
       });
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
