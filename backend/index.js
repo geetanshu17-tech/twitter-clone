@@ -42,6 +42,32 @@ initializeApp({
 });
 
 dotenv.config();
+
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+
+    pool: true,
+
+    maxConnections: 5,
+    maxMessages: 100,
+
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
+});
+
+transporter.verify((err) => {
+  if (err) {
+    console.error("❌ SMTP Verify Failed:", err);
+  } else {
+    console.log("✅ SMTP Ready");
+  }
+});
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -381,18 +407,7 @@ app.post("/verify-payment", async (req, res) => {
     const amountPaid = newPlan === "BRONZE" ? 100 : newPlan === "SILVER" ? 300 : 1000;
 
     try{
-      const transporter = nodemailer.createTransport({
-        host: '74.125.142.108',
-        port: 587,
-        secure: false,
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS
-        },
-        tls: { rejectUnauthorized: false,
-          servername: 'smtp.gmail.com'
-         }
-      });
+      await transporter.sendMail(mailOptions);
 
       const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -457,18 +472,7 @@ app.post("/send-language-otp", async (req, res) => {
     if (targetLanguage === 'fr') {
       // 🇫🇷 FRENCH: Send Email OTP using your existing Nodemailer setup
       try {
-        const transporter = nodemailer.createTransport({
-        host: '74.125.142.108',
-        port: 587,
-        secure: false,
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS
-        },
-        tls: { rejectUnauthorized: false,
-          servername: 'smtp.gmail.com'
-         }        
-      });
+        // Send the email
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
           to: email,
