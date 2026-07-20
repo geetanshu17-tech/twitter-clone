@@ -9,18 +9,18 @@ const UserSchema = mongoose.Schema({
   location: { type: String, default: "" },
   website: { type: String, default: "" },
   
-  // Fixed the Date.now bug by removing ()
   joinedDate: { type: Date, default: Date.now },
 
   notificationEnabled: { type: Boolean, default: false },
   selectedLanguage: { type: String, default: "en" },
   
   // ==========================================
-  // SUBSCRIPTION FIELDS (Task 4)
+  // SUBSCRIPTION FIELDS (Updated for Case Safety)
   // ==========================================
   subscriptionPlan: { 
     type: String, 
-    enum: ["FREE", "BRONZE", "SILVER", "GOLD"], // Strictly limits allowed values
+    uppercase: true, // Automatically converts inputs like "free" -> "FREE" before saving
+    enum: ["FREE", "BRONZE", "SILVER", "GOLD", "free", "bronze", "silver", "gold"], 
     default: "FREE" 
   },
   planStartDate: { 
@@ -33,7 +33,7 @@ const UserSchema = mongoose.Schema({
   },
   paymentStatus: { 
     type: String, 
-    default: "none" // Can be updated to "paid", "pending", etc. when Razorpay is added
+    default: "none" 
   },
   // ==========================================
 
@@ -52,7 +52,8 @@ const UserSchema = mongoose.Schema({
   },
 
   otp: { type: String, default: null },
-  otpExpiry: { type: Date, default: null } // I noticed you used otpExpires in index.js earlier, ensure these match!
+  otpExpiry: { type: Date, default: null },
+  otpExpires: { type: Date, default: null } // Added to prevent crashes if backend refers to otpExpires
 });
 
 export default mongoose.model("User", UserSchema);
