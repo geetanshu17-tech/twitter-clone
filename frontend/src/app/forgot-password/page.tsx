@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
     setGeneratedPassword("");
 
     try {
-      const res = await axios.post("http://localhost:5000/forgot-password", {
+      const res = await axios.post("[https://twitter-clone-24tp.onrender.com](https://twitter-clone-24tp.onrender.com)/forgot-password", {
         identifier,
       });
 

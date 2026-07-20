@@ -78,7 +78,7 @@ export default function NotificationsPage() {
 
 
   const handleClearNotifications = async () => {
-    // 🚨 NEW: Prove to TypeScript the user exists
+    
     if (!user) return; 
 
     try {

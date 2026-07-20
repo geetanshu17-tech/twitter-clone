@@ -226,7 +226,7 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
                 preload="metadata"
               >
                 {/* 🚨 Pointing directly to your Express backend port 5000 */}
-                <source src={`http://localhost:5000${tweetstate.audio.url}`} />
+                <source src={`[https://twitter-clone-24tp.onrender.com](https://twitter-clone-24tp.onrender.com)${tweetstate.audio.url}`} />
                 Your browser does not support the audio element.
               </audio>
             </div>
