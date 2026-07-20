@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import TwitterLogo from "@/components/Twitterlogo";
+import axiosInstance from "@/lib/axiosInstance";
 import { useTranslation } from "react-i18next";
 
 export default function ForgotPasswordPage() {
@@ -25,9 +26,7 @@ export default function ForgotPasswordPage() {
     setGeneratedPassword("");
 
     try {
-      const res = await axios.post("[https://twitter-clone-24tp.onrender.com](https://twitter-clone-24tp.onrender.com)/forgot-password", {
-        identifier,
-      });
+      const res = await axiosInstance.post("/forgot-password", { identifier: identifier });
 
       // Show the password returned from the backend
       setGeneratedPassword(res.data.generatedPassword);
