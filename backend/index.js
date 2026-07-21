@@ -758,7 +758,7 @@ const storage = new CloudinaryStorage({
   params: {
     folder: 'twitter-clone-audio', // Creates a folder in your Cloudinary account
     resource_type: 'video', // Cloudinary processes audio files under the 'video' type
-    allowed_formats: ['mp3', 'wav', 'ogg', 'm4a']
+    allowed_formats: 'mp3'
   },
 });
 
