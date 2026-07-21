@@ -787,6 +787,10 @@ app.post("/upload/audio", upload.single("audio"), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: "No audio file uploaded." });
     }
+    const optimizedAudioUrl = req.file.path.replace(
+      "/upload/", 
+      "/upload/f_mp4/"
+    );
     
     // req.file.path now contains the permanent Cloudinary URL!
     res.status(200).json({ 
