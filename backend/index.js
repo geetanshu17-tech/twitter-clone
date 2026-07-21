@@ -1,32 +1,20 @@
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
-import nodemailer from "nodemailer";
+import axios from "axios";
 import dotenv from "dotenv";
 import multer from "multer";
 import User from "./models/user.js";
 import Tweet from "./models/tweet.js"; 
 import Notification from "./models/notification.js";
 import LoginHistory from "./models/loginHistory.js";
-import {UAParser} from "ua-parser-js";
+import { UAParser } from "ua-parser-js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import fs from "fs";
-
-
-
-// // Read the JSON file safely
-// const serviceAccount = JSON.parse(
-//   fs.readFileSync(new URL("./firebaseServiceAccount.json", import.meta.url))
-// );
-
-// // Initialize Firebase Admin
-// initializeApp({
-//   credential: cert(serviceAccount)
-// });
 
 let serviceAccount;
 if (process.env.FIREBASE_CREDENTIALS) {
@@ -43,33 +31,37 @@ initializeApp({
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,  
-    secure: true,
-
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-
-    pool: true,
-
-    maxConnections: 5,
-    maxMessages: 100,
-
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-});
-
-transporter.verify((err) => {
-  if (err) {
-    console.error("❌ SMTP Verify Failed:", err);
-  } else {
-    console.log("✅ SMTP Ready");
+// ==========================================
+// BREVO EMAIL HELPER (Replaces Nodemailer)
+// ==========================================
+const sendEmailViaBrevo = async ({ toEmail, subject, htmlContent }) => {
+  try {
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: { 
+          name: "Twitter Clone", 
+          email: "geetanshu.2007@gmail.com" // Verified Brevo sender email
+        },
+        to: [{ email: toEmail }],
+        subject: subject,
+        htmlContent: htmlContent,
+      },
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    console.log("✅ Email sent successfully via Brevo!");
+    return response.data;
+  } catch (error) {
+    console.error("❌ Brevo API Error:", error.response?.data || error.message);
+    throw error;
   }
-});
+};
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -132,8 +124,7 @@ app.get("/loggedinuser", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    //mobile time restriction (10am to 1pm ist)
-    
+    // Mobile time restriction (10am to 1pm IST)
     const userAgentString = req.headers['user-agent'] || '';
     const parser = new UAParser(userAgentString);
     const deviceType = parser.getDevice().type || "desktop"; 
@@ -279,7 +270,6 @@ app.post("/post", async (req, res) => {
         error: `You've reached your ${userPlan} plan's posting limit. Upgrade your subscription to continue posting.` 
       });
     }
-    // ==========================================
 
     const formattedData = {
       author: req.body.author,
@@ -301,9 +291,7 @@ app.post("/post", async (req, res) => {
     await tweet.save();    
     const populatedTweet = await Tweet.findById(tweet._id).populate("author");
     
-    // ==========================================
-    // BACKEND KEYWORD DETECTION & LOGGING (Task 1)
-    // ==========================================
+    // BACKEND KEYWORD DETECTION & LOGGING
     const tweetText = tweet.content?.toLowerCase() || ""; 
     
     if (tweetText.includes("cricket") || tweetText.includes("science")) {
@@ -322,7 +310,6 @@ app.post("/post", async (req, res) => {
         console.log(`🚨 [DEBUG] Successfully saved ${notifications.length} alerts to the database!`);
       }
     }
-    // ==========================================
     
     return res.status(201).json(populatedTweet);
   } catch (error) {
@@ -331,14 +318,12 @@ app.post("/post", async (req, res) => {
   }
 });
 
-
-
 // ==========================================
-// 1. CREATE RAZORPAY ORDER (Phase 1 & 3)
+// 1. CREATE RAZORPAY ORDER
 // ==========================================
 app.post("/create-order", async (req, res) => {
   try {
-    // PHASE 3: TIME RESTRICTION (10 AM to 11 AM IST)
+    // TIME RESTRICTION (10 AM to 11 AM IST)
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: 'Asia/Kolkata',
       hour: 'numeric',
@@ -367,7 +352,7 @@ app.post("/create-order", async (req, res) => {
 });
 
 // ==========================================
-// 2. VERIFY PAYMENT & UPGRADE PLAN (Phase 1 & 2)
+// 2. VERIFY PAYMENT & UPGRADE PLAN
 // ==========================================
 app.post("/verify-payment", async (req, res) => {
   try {
@@ -390,7 +375,7 @@ app.post("/verify-payment", async (req, res) => {
       return res.status(400).json({ error: "Invalid payment signature!" });
     }
 
-    // 2. Signature is valid -> Activate Subscription (Phase 2)
+    // 2. Signature is valid -> Activate Subscription
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -405,36 +390,34 @@ app.post("/verify-payment", async (req, res) => {
 
     await user.save();
 
-
     const amountPaid = newPlan === "BRONZE" ? 100 : newPlan === "SILVER" ? 300 : 1000;
 
-    try{
-      await transporter.sendMail(mailOptions);
-
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: "Subscription Confirmed - Premium Receipt",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #3B82F6; text-align: center;">Subscription Confirmed!</h2>
-            <p>Hi <strong>${user.displayName}</strong>,</p>
-            <p>Thank you for upgrading your account. Your premium features are now active. Here are your invoice details:</p>
-            
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 5px 0;"><strong>Plan:</strong> ${newPlan}</p>
-              <p style="margin: 5px 0;"><strong>Amount:</strong> ₹${amountPaid}</p>
-              <p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${razorpay_payment_id}</p>
-              <p style="margin: 5px 0;"><strong>Payment Date:</strong> ${startDate.toLocaleDateString()}</p>
-              <p style="margin: 5px 0;"><strong>Valid Until:</strong> ${expiryDate.toLocaleDateString()}</p>
-            </div>
-            
-            <p style="text-align: center; color: #888; font-size: 12px;">© 2026 X Corp. All rights reserved.</p>
+    // 3. Send Invoice Email via Brevo API
+    try {
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #3B82F6; text-align: center;">Subscription Confirmed!</h2>
+          <p>Hi <strong>${user.displayName || 'Valued User'}</strong>,</p>
+          <p>Thank you for upgrading your account. Your premium features are now active. Here are your invoice details:</p>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Plan:</strong> ${newPlan}</p>
+            <p style="margin: 5px 0;"><strong>Amount:</strong> ₹${amountPaid}</p>
+            <p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${razorpay_payment_id}</p>
+            <p style="margin: 5px 0;"><strong>Payment Date:</strong> ${startDate.toLocaleDateString()}</p>
+            <p style="margin: 5px 0;"><strong>Valid Until:</strong> ${expiryDate.toLocaleDateString()}</p>
           </div>
-        `,
-      };
+          
+          <p style="text-align: center; color: #888; font-size: 12px;">© 2026 X Corp. All rights reserved.</p>
+        </div>
+      `;
 
-      await transporter.sendMail(mailOptions);
+      await sendEmailViaBrevo({
+        toEmail: user.email,
+        subject: "Subscription Confirmed - Premium Receipt",
+        htmlContent: htmlContent
+      });
+
       console.log(`✅ [DEBUG] Invoice email sent to ${user.email}`);
     } catch (emailError) {
       console.error("❌ [DEBUG] Failed to send invoice email:", emailError);
@@ -445,46 +428,38 @@ app.post("/verify-payment", async (req, res) => {
       user
     });
 
-
-    } catch (error) {
+  } catch (error) {
     console.error("Verification Error:", error);
     res.status(500).json({ error: "Internal server error." });
   }
 });
 
-
 // ==========================================
-// SEND LANGUAGE OTP (Phase 1)
+// SEND LANGUAGE OTP
 // ==========================================
 app.post("/send-language-otp", async (req, res) => {
   const { email, phone, targetLanguage } = req.body;
 
   try {
-    // 1. Find the user to attach the OTP to their database record
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // 2. Generate a 6-digit OTP and save it to the database
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = generatedOtp;
     user.otpExpires = new Date(Date.now() + 5 * 60000); // 5 minutes validity
     await user.save();
 
-    // 3. Route the OTP based on the requested language
     if (targetLanguage === 'fr') {
-      // 🇫🇷 FRENCH: Send Email OTP using your existing Nodemailer setup
+      // FRENCH: Send Email OTP via Brevo API
       try {
-        // Send the email
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: email,
+        await sendEmailViaBrevo({
+          toEmail: email,
           subject: "Language Verification Code",
-          html: `<p>Your verification code to change your language to French is: <strong>${generatedOtp}</strong></p>`
+          htmlContent: `<p>Your verification code to change your language to French is: <strong>${generatedOtp}</strong></p>`
         });
         console.log(`✅ [DEBUG] French Language OTP sent to ${email}`);
       } catch (emailErr) {
-        console.error("Nodemailer error:", emailErr);
-        // Fallback to terminal if email fails during dev
+        console.error("Brevo API error:", emailErr);
         console.log(`\n🚨 [FALLBACK EMAIL OTP] Email: ${email} | OTP: ${generatedOtp}\n`);
       }
     } else {
@@ -503,20 +478,16 @@ app.get("/post", async (req, res) => {
   try {
     const tweets = await Tweet.find().sort({ timestamp: -1 }).populate("author");
     
-    // Intercept the data and attach your Render domain to the audio URLs
     const formattedTweets = tweets.map(tweet => {
-      // Convert the Mongoose document to a standard JavaScript object so we can edit it
       const tweetObj = tweet.toObject(); 
       
       if (tweetObj.audio && tweetObj.audio.url) {
-        // 1. Clean up old mixed-content errors from localhost testing
         if (tweetObj.audio.url.includes("localhost:5000")) {
           tweetObj.audio.url = tweetObj.audio.url.replace(
             "http://localhost:5000", 
             "https://twitter-clone-24tp.onrender.com"
           );
         } 
-        // 2. Fix the 0:00/0:00 issue by converting relative Render paths to absolute URLs
         else if (tweetObj.audio.url.startsWith("/")) {
           tweetObj.audio.url = `https://twitter-clone-24tp.onrender.com${tweetObj.audio.url}`;
         }
@@ -524,14 +495,13 @@ app.get("/post", async (req, res) => {
       return tweetObj;
     });
 
-    // Send the patched data to the Vercel frontend
     return res.status(200).json(formattedTweets); 
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
 });
 
-// LIKE / UNLIKE Tweet (Toggle functionality)
+// LIKE / UNLIKE Tweet
 app.post("/like/:tweetid", async (req, res) => {
   try {
     const { userId } = req.body;
@@ -539,7 +509,6 @@ app.post("/like/:tweetid", async (req, res) => {
     
     if (!tweet) return res.status(404).json({ error: "Tweet not found" });
 
-    
     const userIndex = tweet.likedBy.indexOf(userId);
     if (userIndex === -1) {
       tweet.likes += 1;
@@ -556,7 +525,7 @@ app.post("/like/:tweetid", async (req, res) => {
   }
 });
 
-// RETWEET / UN-RETWEET (Toggle functionality)
+// RETWEET / UN-RETWEET
 app.post("/retweet/:tweetid", async (req, res) => {
   try {
     const { userId } = req.body;
@@ -564,7 +533,6 @@ app.post("/retweet/:tweetid", async (req, res) => {
     
     if (!tweet) return res.status(404).json({ error: "Tweet not found" });
 
-    
     const userIndex = tweet.retweetedBy.indexOf(userId);
     if (userIndex === -1) {
       tweet.retweets += 1;
@@ -581,22 +549,17 @@ app.post("/retweet/:tweetid", async (req, res) => {
   }
 });
 
-// ==========================================
 // DELETE A TWEET
-// ==========================================
 app.delete("/post/:tweetid", async (req, res) => {
   try {
-    // Axios DELETE requests pass the body inside a 'data' object
     const { userId } = req.body; 
     
-    // 1. Find the tweet first to verify ownership
     const tweet = await Tweet.findById(req.params.tweetid);
     
     if (!tweet) {
       return res.status(404).json({ error: "Tweet not found" });
     }
 
-    // 2. Security Check: Ensure the requester is the author
     if (tweet.author.toString() !== userId) {
       return res.status(403).json({ error: "Unauthorized: You can only delete your own posts." });
     }
@@ -613,16 +576,13 @@ app.delete("/post/:tweetid", async (req, res) => {
 // NOTIFICATION ROUTES
 // ==========================================
 
-// GET notifications using the user's EMAIL
 app.get("/notifications/:email", async (req, res) => {
   try {
-    // 1. Find the MongoDB user using their email
     const user = await User.findOne({ email: req.params.email });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // 2. Fetch notifications using that user's valid MongoDB _id
     const notifications = await Notification.find({ recipient: user._id })
                                             .sort({ createdAt: -1 });
     res.status(200).json(notifications);
@@ -631,7 +591,6 @@ app.get("/notifications/:email", async (req, res) => {
   }
 });
 
-// POST a new notification (used if you do local keyword detection)
 app.post("/notifications", async (req, res) => {
   try {
     const notification = new Notification(req.body);
@@ -642,7 +601,6 @@ app.post("/notifications", async (req, res) => {
   }
 });
 
-// Clear all notifications for a user
 app.delete("/notifications/clear", async (req, res) => {
   try {
     const { userId } = req.body;
@@ -657,7 +615,6 @@ app.delete("/notifications/clear", async (req, res) => {
 // FORGOT PASSWORD ROUTE
 // ==========================================
 
-// 1. Password Generator Utility (A-Z, a-z, 0-9, Symbols)
 const generateCustomPassword = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   let password = '';
@@ -667,16 +624,13 @@ const generateCustomPassword = () => {
   return password;
 };
 
-// 2. The Reset Endpoint
 app.post("/forgot-password", async (req, res) => {
   try {
-    const { identifier } = req.body; // Can be email or phone
+    const { identifier } = req.body;
 
     if (!identifier) {
       return res.status(400).json({ error: "Email or phone number is required" });
     }
-
-    // Find the user by email OR phone
     const user = await User.findOne({
       $or: [{ email: identifier }, { phone: identifier }]
     });
@@ -685,31 +639,26 @@ app.post("/forgot-password", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // --- DAILY LIMIT CHECK ---
+    // DAILY LIMIT CHECK
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate day comparison
+    today.setHours(0, 0, 0, 0);
 
     if (user.lastPasswordResetDate) {
       const lastReset = new Date(user.lastPasswordResetDate);
       lastReset.setHours(0, 0, 0, 0);
 
-      // If the last reset was on the exact same calendar day...
       if (lastReset.getTime() === today.getTime()) {
          return res.status(429).json({ 
            error: "You can use this option only one time per day." 
          });
       }
     }
-    // -------------------------
 
-    // Generate the new password
     const newPassword = generateCustomPassword();
 
     try {
-      // 1. Find the user in Firebase by their email
       const firebaseUser = await getAuth().getUserByEmail(user.email);
       
-      // 2. Force update their password in Firebase
       await getAuth().updateUser(firebaseUser.uid, {
         password: newPassword
       });
@@ -718,7 +667,6 @@ app.post("/forgot-password", async (req, res) => {
     } catch (firebaseError) {
       console.error("Firebase Admin Error:", firebaseError);
       
-      // Send specific, helpful messages back to the frontend
       if (firebaseError.code === 'auth/user-not-found') {
         return res.status(404).json({ error: "User not found in Firebase auth system." });
       } 
@@ -726,13 +674,10 @@ app.post("/forgot-password", async (req, res) => {
         return res.status(400).json({ error: "Password must be at least 6 characters long." });
       }
       
-      // Fallback for any other Firebase issues
       return res.status(500).json({ error: "Failed to sync password with authentication provider." });
     }
-    // ==========================================
 
-    // Update the database
-    user.lastPasswordResetDate = new Date(); // Sets to right now
+    user.lastPasswordResetDate = new Date();
     user.passwordResetCount += 1;
     
     await user.save();
@@ -748,29 +693,23 @@ app.post("/forgot-password", async (req, res) => {
   }
 });
 
-
-//Login History Route
+// LOGIN HISTORY
 app.post("/login-history", async (req, res) => {
   try {
-    const{userId} = req.body;
+    const { userId } = req.body;
     
     if (!userId) {
       return res.status(400).json({ error: "User ID is required" });
     }
 
-    //parsing the user-agent string to get browser and OS info
     const userAgentString = req.headers['user-agent'] || '';
     const parser = new UAParser(userAgentString);
     const result = parser.getResult();
 
-    //extracting browser and operating system information
     const browser = parser.getBrowser().name || "unknown";
     const operatingSystem = parser.getOS().name || "unknown";
-
     const deviceType = result.device.type || "Desktop"; 
-
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress || "unknown";
-
     const location = "unknown";
 
     const historyRecord = new LoginHistory({
@@ -784,7 +723,6 @@ app.post("/login-history", async (req, res) => {
 
     await historyRecord.save();
     res.status(201).json({ message: "Login history recorded successfully", historyRecord });
-    // console.log(`✅ Login Recorded | Browser: ${browser} | OS: ${operatingSystem} | Device: ${deviceType}`);
   } catch (error) {
     console.error("Login History Error:", error);
     res.status(500).json({ error: "Internal server error", details: error.message });
@@ -793,7 +731,7 @@ app.post("/login-history", async (req, res) => {
 
 app.get("/login-history/:userId", async (req, res) => {
   try {
-    const histories = await LoginHistory.find({ userId: req.params.userId }).sort({ loginTime: -1 }).limit(10); // Fetch the last 10 login records
+    const histories = await LoginHistory.find({ userId: req.params.userId }).sort({ loginTime: -1 }).limit(10);
     res.status(200).json(histories);
   } catch (error) {
     console.error("Login History Error:", error);
@@ -801,30 +739,25 @@ app.get("/login-history/:userId", async (req, res) => {
   }
 });
 
-
 // ==========================================
 // AUDIO UPLOAD ROUTE (MULTER)
 // ==========================================
 
-// 1. Ensure the upload directory exists
 const uploadDir = "public/uploads/audio";
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// 2. Configure where and how to save the file
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
-    // Saves as: 1689234512-filename.mp3 (removes spaces from original name)
     cb(null, uniqueSuffix + "-" + file.originalname.replace(/\s+/g, '-')); 
   }
 });
 
-// 3. Security: Only allow audio files
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("audio/")) {
     cb(null, true);
@@ -836,15 +769,12 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ 
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
+  limits: { fileSize: 100 * 1024 * 1024 }
 });
 
-// 4. The actual POST route for the frontend to hit
 app.post("/upload/audio", upload.single("audio"), (req, res) => {
   try {
-    // ==========================================
-    // TASK 2: TIME RESTRICTION (2:00 PM to 7:00 PM IST)
-    // ==========================================
+    // TIME RESTRICTION (2:00 PM to 7:00 PM IST)
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: 'Asia/Kolkata',
       hour: 'numeric',
@@ -852,19 +782,16 @@ app.post("/upload/audio", upload.single("audio"), (req, res) => {
     });
     const currentHourIST = parseInt(formatter.format(new Date()));
 
-    // 14 = 2:00 PM, 19 = 7:00 PM
     if (currentHourIST < 14 || currentHourIST >= 19) {
       return res.status(403).json({ 
         error: "Audio uploads are restricted. You can only post audio tweets between 2:00 PM and 7:00 PM IST." 
       });
     }
-    // ==========================================
 
     if (!req.file) {
       return res.status(400).json({ error: "No audio file uploaded." });
     }
     
-    // Create the URL that the frontend will use to play it
     const audioUrl = `/uploads/audio/${req.file.filename}`;
     
     res.status(200).json({ 
