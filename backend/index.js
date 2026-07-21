@@ -36,30 +36,30 @@ dotenv.config();
 // ==========================================
 // BREVO EMAIL HELPER (Replaces Nodemailer)
 // ==========================================
-const sendEmailViaBrevo = async ({ toEmail, subject, htmlContent }) => {
+const sendEmailViaGoogle = async ({ toEmail, subject, htmlContent }) => {
   try {
     const response = await axios.post(
-      "https://api.brevo.com/v3/smtp/email",
+      process.env.GOOGLE_SCRIPT_URL,
       {
-        sender: { 
-          name: "Twitter Clone", 
-          email: "geetanshu.2007@gmail.com" // Verified Brevo sender email
-        },
-        to: [{ email: toEmail }],
+        to: toEmail,
         subject: subject,
-        htmlContent: htmlContent,
+        html: htmlContent,
       },
       {
         headers: {
-          "api-key": process.env.BREVO_API_KEY,
           "Content-Type": "application/json",
         },
       }
     );
-    console.log("✅ Email sent successfully via Brevo!");
+
+    console.log("✅ Email sent successfully via Google Apps Script!");
     return response.data;
+
   } catch (error) {
-    console.error("❌ Brevo API Error:", error.response?.data || error.message);
+    console.error(
+      "❌ Google Apps Script Error:",
+      error.response?.data || error.message
+    );
     throw error;
   }
 };
@@ -414,7 +414,7 @@ app.post("/verify-payment", async (req, res) => {
         </div>
       `;
 
-      await sendEmailViaBrevo({
+      await sendEmailViaGoogle({
         toEmail: user.email,
         subject: "Subscription Confirmed - Premium Receipt",
         htmlContent: htmlContent
@@ -454,7 +454,7 @@ app.post("/send-language-otp", async (req, res) => {
     if (targetLanguage === 'fr') {
       // FRENCH: Send Email OTP via Brevo API
       try {
-        await sendEmailViaBrevo({
+        await sendEmailViaGoogle({
           toEmail: email,
           subject: "Language Verification Code",
           htmlContent: `<p>Your verification code to change your language to French is: <strong>${generatedOtp}</strong></p>`
