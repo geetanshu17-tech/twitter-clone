@@ -11,6 +11,8 @@ import LoginHistory from "./models/loginHistory.js";
 import { UAParser } from "ua-parser-js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
@@ -740,38 +742,32 @@ app.get("/login-history/:userId", async (req, res) => {
 });
 
 // ==========================================
-// AUDIO UPLOAD ROUTE (MULTER)
+// AUDIO UPLOAD ROUTE (CLOUDINARY)
 // ==========================================
 
-const uploadDir = "public/uploads/audio";
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + "-" + file.originalname.replace(/\s+/g, '-')); 
-  }
+// 1. Configure Cloudinary with your environment variables
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("audio/")) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only audio files are allowed!"), false);
-  }
-};
+// 2. Tell Multer to send files directly to Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'twitter-clone-audio', // Creates a folder in your Cloudinary account
+    resource_type: 'video', // Cloudinary processes audio files under the 'video' type
+    allowed_formats: ['mp3', 'wav', 'ogg', 'm4a']
+  },
+});
 
 const upload = multer({ 
   storage: storage,
-  fileFilter: fileFilter,
-  limits: { fileSize: 100 * 1024 * 1024 }
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
 });
 
+// 3. The Upload Route
 app.post("/upload/audio", upload.single("audio"), (req, res) => {
   try {
     // TIME RESTRICTION (2:00 PM to 7:00 PM IST)
@@ -792,11 +788,10 @@ app.post("/upload/audio", upload.single("audio"), (req, res) => {
       return res.status(400).json({ error: "No audio file uploaded." });
     }
     
-    const audioUrl = `/uploads/audio/${req.file.filename}`;
-    
+    // req.file.path now contains the permanent Cloudinary URL!
     res.status(200).json({ 
-      message: "Audio uploaded successfully", 
-      url: audioUrl 
+      message: "Audio uploaded successfully to Cloudinary", 
+      url: req.file.path 
     });
   } catch (error) {
     console.error("Upload Error:", error);
