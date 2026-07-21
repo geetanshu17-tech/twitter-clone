@@ -54,6 +54,9 @@ const TweetComposer = ({ onTweetPosted }: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    console.log("File Name:", file.name);
+    console.log("File Type:", file.type);
+    console.log("File Size:", file.size);
     // 1. Time Validation
     if (!checkTimeRestriction()) {
       if (audioInputRef.current) audioInputRef.current.value = "";
