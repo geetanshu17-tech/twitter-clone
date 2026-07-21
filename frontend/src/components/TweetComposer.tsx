@@ -51,6 +51,7 @@ const TweetComposer = ({ onTweetPosted }: any) => {
 
   const handleAudioSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAudioError(null);
+    console.log("handleAudioSelection called");
     const file = e.target.files?.[0];
     if (!file) return;
 

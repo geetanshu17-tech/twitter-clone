@@ -215,18 +215,15 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
               />
             </div>
           )}
-          {/* ========================================== */}
-          {/* 🎙️ NEW: ATTACHED AUDIO PLAYER */}
-          {/* ========================================== */}
+          {/* 🎙️ ATTACHED AUDIO PLAYER */}
           {tweetstate.audio?.url && (
             <div className="mb-3 w-full border border-gray-800 rounded-xl overflow-hidden bg-gray-900/50 p-2">
               <audio 
                 controls 
                 className="w-full h-10"
                 preload="metadata"
+                src={tweetstate.audio.url}
               >
-                {/* 🚨 Pointing directly to your Express backend port 5000 */}
-                <source src={`[https://twitter-clone-24tp.onrender.com](https://twitter-clone-24tp.onrender.com)${tweetstate.audio.url}`} />
                 Your browser does not support the audio element.
               </audio>
             </div>
