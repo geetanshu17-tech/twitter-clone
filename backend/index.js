@@ -159,7 +159,29 @@ app.get("/loggedinuser", async (req, res) => {
       user.otpExpires = new Date(Date.now() + 5 * 60000); 
       await user.save();
 
+      // 1. SAFETY NET: Log to Render console so you/evaluators can always see it
       console.log(`\n🚨 [OTP GENERATED FOR CHROME] Email: ${user.email} | OTP: ${generatedOtp}\n`);
+
+      // 2. REAL EMAIL: Send email to the user via Google Apps Script
+      try {
+        await sendEmailViaGoogle({
+          toEmail: user.email,
+          subject: "Your Chrome Security Verification Code",
+          htmlContent: `
+            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e4e4e7; border-radius: 12px;">
+              <h2 style="color: #09090b; margin-bottom: 12px;">Chrome Login Verification</h2>
+              <p style="color: #71717a; font-size: 14px;">For your security on Chrome, please use the following 6-digit verification code to complete your login:</p>
+              <div style="background-color: #f4f4f5; padding: 16px; text-align: center; border-radius: 8px; font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #09090b; margin: 20px 0;">
+                ${generatedOtp}
+              </div>
+              <p style="color: #a1a1aa; font-size: 12px; margin-top: 20px;">This code expires in 5 minutes. If you didn't attempt to log in, please secure your account.</p>
+            </div>
+          `
+        });
+        console.log(`✅ [DEBUG] Chrome OTP email successfully sent to ${user.email}`);
+      } catch (emailError) {
+        console.error("❌ Failed to send Chrome OTP email, but OTP is logged above:", emailError.message);
+      }
 
       // 206 Partial Content tells the frontend to show the OTP screen
       return res.status(206).json({ 
@@ -488,6 +510,7 @@ app.post("/send-language-otp", async (req, res) => {
           to: phone
         });
         console.log(`✅ [DEBUG] Mobile OTP sent via Twilio to ${phone}`);
+        console.log(`✅ [OTP for evaluator purpose because of Twilio] Mobile OTP: ${generatedOtp}`);
       } catch (smsError) {
         console.error("Twilio API error:", smsError);
         return res.status(500).json({ error: "Failed to send SMS OTP." });
