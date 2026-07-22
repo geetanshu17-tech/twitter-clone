@@ -12,8 +12,8 @@ import {
 } from "firebase/auth";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { auth } from "./firebase";
+import i18n from "@/i18n";
 import axiosInstance from "../lib/axiosInstance";
-import { useTranslation } from "react-i18next";
 
 interface User {
   _id: string;
@@ -73,7 +73,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [pendingOtpEmail, setPendingOtpEmail] = useState<string | null>(null); 
   const router = useRouter();
 
-  const { i18n } = useTranslation();
 
   useEffect(() => {
     const unsubcribe = onAuthStateChanged(auth, async (firebaseUser) => {

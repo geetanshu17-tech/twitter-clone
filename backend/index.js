@@ -13,6 +13,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import twilio from "twilio";
 
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
@@ -32,6 +33,7 @@ initializeApp({
 });
 
 dotenv.config();
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // ==========================================
 // BREVO EMAIL HELPER (Replaces Nodemailer)
@@ -175,7 +177,7 @@ app.get("/loggedinuser", async (req, res) => {
 
 app.post("/verify-otp", async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, otp, targetLanguage } = req.body;
     const user = await User.findOne({ email });
 
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -185,8 +187,15 @@ app.post("/verify-otp", async (req, res) => {
       return res.status(401).json({ error: "Invalid or expired OTP." });
     }
 
+    // Clear OTP fields
     user.otp = null;
     user.otpExpires = null;
+
+    // UPDATE LANGUAGE IN MONGO DB IF TARGET LANGUAGE WAS PROVIDED
+    if (targetLanguage) {
+      user.selectedLanguage = targetLanguage;
+    }
+
     await user.save();
 
     return res.status(200).json(user);
@@ -452,7 +461,7 @@ app.post("/send-language-otp", async (req, res) => {
     await user.save();
 
     if (targetLanguage === 'fr') {
-      // FRENCH: Send Email OTP via Brevo API
+      // FRENCH: Send Email OTP via Google (Apps script)
       try {
         await sendEmailViaGoogle({
           toEmail: email,
@@ -465,7 +474,24 @@ app.post("/send-language-otp", async (req, res) => {
         console.log(`\n🚨 [FALLBACK EMAIL OTP] Email: ${email} | OTP: ${generatedOtp}\n`);
       }
     } else {
-      console.log(`\n🚨 [MOBILE OTP GENERATED] Phone: ${phone || 'N/A'} | Target: ${targetLanguage.toUpperCase()} | OTP: ${generatedOtp}\n`);
+      // ALL OTHER LANGUAGES: Send SMS OTP via Twilio
+      if (!phone) {
+        return res.status(400).json({ 
+          error: "No phone number linked to this account. Please update your profile in MongoDB." 
+        });
+      }
+
+      try {
+        await twilioClient.messages.create({
+          body: `Your verification code is: ${generatedOtp}. Do not share this with anyone.`,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: phone
+        });
+        console.log(`✅ [DEBUG] Mobile OTP sent via Twilio to ${phone}`);
+      } catch (smsError) {
+        console.error("Twilio API error:", smsError);
+        return res.status(500).json({ error: "Failed to send SMS OTP." });
+      }
     }
 
     res.status(200).json({ message: "OTP sent successfully" });

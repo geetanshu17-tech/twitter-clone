@@ -13,6 +13,12 @@ const UserSchema = mongoose.Schema({
 
   notificationEnabled: { type: Boolean, default: false },
   selectedLanguage: { type: String, default: "en" },
+
+  phone: {
+    type: String,
+    default: "",
+    trim: true,
+  },
   
   // ==========================================
   // SUBSCRIPTION FIELDS (Updated for Case Safety)

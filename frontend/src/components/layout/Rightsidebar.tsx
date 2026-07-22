@@ -72,7 +72,8 @@ export default function RightSidebar() {
       // Hit your existing verify route
       await axiosInstance.post("/verify-otp", {
         email: currentUser.email,
-        otp: otpInput
+        otp: otpInput,
+        targetLanguage: pendingLanguage
       });
 
       // 🚨 SUCCESS! Change the language and close modal
@@ -193,7 +194,7 @@ export default function RightSidebar() {
         <h3 className="text-[#e7e9ea] text-xl font-extrabold mb-3">{t('language') || 'Language'}</h3>
         <select 
           value={i18n.resolvedLanguage} 
-          onChange={handleLanguageSelect} // <-- Updated this line!
+          onChange={handleLanguageSelect} 
           className="w-full bg-black text-white p-3 rounded-xl border border-zinc-700 outline-none focus:border-sky-500 appearance-none cursor-pointer"
         >
           <option value="en">English</option>
