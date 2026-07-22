@@ -244,7 +244,27 @@ app.post("/generate-audio-otp", async (req, res) => {
 
     console.log(`\n🚨 [AUDIO OTP GENERATED] Email: ${user.email} | OTP: \n ${generatedOtp}\n`);
 
-    return res.status(200).json({ message: "OTP generated successfully." });
+    try {
+      await sendEmailViaGoogle({
+        toEmail: user.email,
+        subject: "Audio Tweet Security Verification Code",
+        htmlContent: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e4e4e7; border-radius: 12px;">
+            <h2 style="color: #09090b; margin-bottom: 12px;">Audio Tweet Verification</h2>
+            <p style="color: #71717a; font-size: 14px;">Please use the following 6-digit code to verify your account before posting your audio tweet:</p>
+            <div style="background-color: #f4f4f5; padding: 16px; text-align: center; border-radius: 8px; font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #09090b; margin: 20px 0;">
+              ${generatedOtp}
+            </div>
+            <p style="color: #a1a1aa; font-size: 12px; margin-top: 20px;">This code expires in 5 minutes. If you did not request this, please ignore this email.</p>
+          </div>
+        `
+      });
+      console.log(`✅ [DEBUG] Audio OTP email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error("❌ Failed to send Audio OTP email, fallback OTP logged above:", emailError.message);
+    }
+
+    return res.status(200).json({ message: "Audio OTP sent to email successfully." });
   } catch (error) {
     console.error("OTP Generation Error:", error);
     return res.status(500).json({ error: error.message });
