@@ -13,6 +13,7 @@ import {
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { auth } from "./firebase";
 import axiosInstance from "../lib/axiosInstance";
+import { useTranslation } from "react-i18next";
 
 interface User {
   _id: string;
@@ -72,6 +73,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [pendingOtpEmail, setPendingOtpEmail] = useState<string | null>(null); 
   const router = useRouter();
 
+  const { i18n } = useTranslation();
+
   useEffect(() => {
     const unsubcribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser?.email) {
@@ -95,6 +98,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           if (res.data) {
             setUser(res.data);
             localStorage.setItem("twitter-user", JSON.stringify(res.data));
+
+            localStorage.setItem("i18nextLng", res.data.selectedLanguage || "en");
           }
         } catch (err) {
           console.log("Failed to fetch user on refresh:", err);
@@ -133,6 +138,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("4. Hit the Success Block! Redirecting...");
         setUser(res.data);
         localStorage.setItem("twitter-user", JSON.stringify(res.data));
+
+        localStorage.setItem("i18nextLng", res.data.selectedLanguage || "en");
+
+        const userLang = res.data.selectedLanguage || "en";
+        localStorage.setItem("i18nextLng", userLang);
+        i18n.changeLanguage(userLang); 
         
         try {
           await axiosInstance.post("/login-history", { userId: res.data._id });
@@ -200,6 +211,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
     await signOut(auth);
     localStorage.removeItem("twitter-user");
+    localStorage.removeItem("i18nextLng");
+    i18n.changeLanguage("en");
   };
 
   const updateProfile = async (profileData: {
@@ -276,6 +289,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (userData) {
         setUser(userData);
         localStorage.setItem("twitter-user", JSON.stringify(userData));
+
+        localStorage.setItem("i18nextLng", userData.selectedLanguage || "en");
+        const userLang = userData.selectedLanguage || "en";
+        localStorage.setItem("i18nextLng", userLang);
+        i18n.changeLanguage(userLang);
         
         try {
           await axiosInstance.post("/login-history", { userId: userData._id });
