@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
@@ -42,7 +43,6 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
     retweetedBy: initialTweetData.retweetedBy || [],
   });
 
-  // <-- NEW: State to hide the tweet instantly when deleted
   const [isDeleted, setIsDeleted] = useState(false);
 
   const likeTweet = async (e: React.MouseEvent) => {
@@ -101,29 +101,23 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
     }
   };
 
-  // ==========================================
-  // NEW: DELETE FUNCTION LOGIC
-  // ==========================================
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation(); 
-    
     if (!user) return;
 
     const confirmDelete = window.confirm("Are you sure you want to delete this post?");
     if (!confirmDelete) return;
 
-    // Instantly hide the tweet for a snappy UI
     setIsDeleted(true);
 
     try {
-      // Send the delete request to the backend
       await axiosInstance.delete(`/post/${tweetstate._id}`, {
         data: { userId: user._id }
       });
       console.log("Tweet deleted from database");
     } catch (error) {
       console.error("Failed to delete tweet:", error);
-      setIsDeleted(false); // Put it back if the server fails
+      setIsDeleted(false);
       alert("Something went wrong. Could not delete the post.");
     }
   };
@@ -137,15 +131,14 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
   const isLiked = user ? tweetstate.likedBy.includes(user._id) : false;
   const isRetweet = user ? tweetstate.retweetedBy.includes(user._id) : false;
 
-  // <-- NEW: If the user deleted the tweet, don't render anything!
   if (isDeleted) return null;
 
   return (
-    <article className="px-4 pt-3 pb-2 border-b border-gray-800 bg-black hover:bg-white/[0.02] transition-colors cursor-pointer w-full">
-      <div className="flex space-x-3">
-        {/* Avatar Section */}
-        <div className="shrink-0 pt-1">
-          <Avatar className="h-10 w-10">
+    <article className="px-3 sm:px-4 pt-3 pb-2 border-b border-gray-800 bg-black hover:bg-white/[0.02] transition-colors cursor-pointer w-full">
+      <div className="flex space-x-2.5 sm:space-x-3">
+        {/* Avatar */}
+        <div className="shrink-0 pt-0.5">
+          <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
             <AvatarImage src={tweetstate.author.avatar} alt={tweetstate.author.displayName} className="object-cover" />
             <AvatarFallback>{tweetstate.author.displayName[0]}</AvatarFallback>
           </Avatar>
@@ -153,7 +146,7 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-0.5">
-            <div className="flex items-center space-x-1 overflow-hidden text-[15px]">
+            <div className="flex items-center space-x-1 overflow-hidden text-[14px] sm:text-[15px] min-w-0">
               <span className="font-bold text-white hover:underline truncate">
                 {tweetstate.author.displayName}
               </span>
@@ -166,13 +159,13 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
                 </div>
               )}
 
-              <span className="text-gray-500 truncate shrink-0">
+              <span className="text-gray-500 truncate shrink">
                 @{tweetstate.author.username}
               </span>
 
-              <span className="text-gray-500 shrink-0 px-1">·</span>
+              <span className="text-gray-500 shrink-0 px-0.5">·</span>
 
-              <span className="text-gray-500 hover:underline shrink-0">
+              <span className="text-gray-500 hover:underline shrink-0 text-xs sm:text-sm">
                 {tweetstate.timestamp &&
                   new Date(tweetstate.timestamp).toLocaleDateString("en-us", {
                     month: "short",
@@ -181,46 +174,45 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
               </span>
             </div>
 
-            {/* ========================================== */}
-            {/* NEW: RENDER TRASH ICON FOR AUTHOR ONLY */}
-            {/* ========================================== */}
-            <div className="flex items-center">
+            {/* Trash icon for author */}
+            <div className="flex items-center shrink-0">
               {user && user._id === tweetstate.author._id && (
                 <button 
                   onClick={handleDelete}
-                  className="text-gray-500 hover:text-red-500 hover:bg-red-500/10 p-2 rounded-full transition-colors group"
+                  className="text-gray-500 hover:text-red-500 hover:bg-red-500/10 p-1.5 sm:p-2 rounded-full transition-colors group"
                   title="Delete Post"
                 >
-                  <Trash2 className="h-5 w-5 group-hover:text-red-500" />
+                  <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 group-hover:text-red-500" />
                 </button>
               )}
-              <Button className="text-gray-500 hover:text-blue-500 hover:bg-blue-500/10 p-2 rounded-full transition-colors group -mr-2">
-                <MoreHorizontal className="h-5 w-5 group-hover:text-blue-500" />
+              <Button variant="ghost" className="text-gray-500 hover:text-blue-500 hover:bg-blue-500/10 p-1.5 sm:p-2 rounded-full transition-colors h-auto -mr-2">
+                <MoreHorizontal className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
           </div>
 
           {/* Text Content */}
-          <div className="text-[15px] text-white mb-3 whitespace-pre-wrap wrap-break-words leading-snug">
+          <div className="text-[14px] sm:text-[15px] text-white mb-2.5 whitespace-pre-wrap break-words leading-normal">
             {tweetstate.content}
           </div>
 
           {/* Attached Image */}
           {tweetstate.image && (
-            <div className="mb-3 rounded-2xl overflow-hidden border border-gray-800">
+            <div className="mb-2.5 rounded-2xl overflow-hidden border border-gray-800">
               <img
                 src={tweetstate.image}
                 alt="Tweet attachment"
-                className="w-full h-auto max-h-125 object-cover"
+                className="w-full h-auto max-h-96 sm:max-h-125 object-cover"
               />
             </div>
           )}
-          {/* 🎙️ ATTACHED AUDIO PLAYER */}
+
+          {/* Attached Audio Player */}
           {tweetstate.audio?.url && (
-            <div className="mb-3 w-full border border-gray-800 rounded-xl overflow-hidden bg-gray-900/50 p-2">
+            <div className="mb-2.5 w-full border border-gray-800 rounded-xl overflow-hidden bg-gray-900/50 p-2">
               <audio 
                 controls 
-                className="w-full h-10"
+                className="w-full h-9 sm:h-10"
                 preload="metadata"
                 src={tweetstate.audio.url}
               >
@@ -229,43 +221,37 @@ export default function TweetCard({ tweet }: { tweet?: any }) {
             </div>
           )}
 
-          {/* Action Buttons (Comment, Retweet, Like, Share) */}
-          <div className="flex items-center justify-between text-gray-500 max-w-[425px]">
-            {/* Comment */}
+          {/* Action Buttons */}
+          <div className="flex items-center justify-between text-gray-500 w-full sm:max-w-[425px]">
             <button className="flex items-center group transition-colors hover:text-blue-500 outline-none">
-              <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                <MessageCircle className="h-4.5 w-4.5" />
+              <div className="p-1.5 sm:p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
+                <MessageCircle className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
               </div>
-              <span className="text-[13px] px-1">{formatNumber(tweetstate.comments || 0)}</span>
+              <span className="text-[12px] sm:text-[13px] px-1">{formatNumber(tweetstate.comments || 0)}</span>
             </button>
 
-            {/* Retweet */}
             <button 
               onClick={retweetTweet}
               className={`flex items-center group transition-colors outline-none ${isRetweet ? 'text-green-500' : 'hover:text-green-500'}`}
             >
-              <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
-                <Repeat2 className="h-4.5 w-4.5" />
+              <div className="p-1.5 sm:p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
+                <Repeat2 className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
               </div>
-              <span className="text-[13px] px-1">{formatNumber(tweetstate.retweets || 0)}</span>
+              <span className="text-[12px] sm:text-[13px] px-1">{formatNumber(tweetstate.retweets || 0)}</span>
             </button>
 
-            {/* Like */}
             <button 
               onClick={likeTweet}
               className={`flex items-center group transition-colors outline-none ${isLiked ? 'text-pink-600' : 'hover:text-pink-600'}`}
             >
-              <div className="p-2 rounded-full group-hover:bg-pink-500/10 transition-colors">
-                <Heart className={`h-4.5 w-4.5 ${isLiked ? 'fill-current' : ''}`} />
+              <div className="p-1.5 sm:p-2 rounded-full group-hover:bg-pink-500/10 transition-colors">
+                <Heart className={`h-4 w-4 sm:h-4.5 sm:w-4.5 ${isLiked ? 'fill-current' : ''}`} />
               </div>
-              <span className="text-[13px] px-1">{formatNumber(tweetstate.likes || 0)}</span>
+              <span className="text-[12px] sm:text-[13px] px-1">{formatNumber(tweetstate.likes || 0)}</span>
             </button>
 
-            {/* Share */}
-            <Button className="flex items-center group transition-colors hover:text-blue-500 outline-none">
-              <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                <Share className="h-4.5 w-4.5" />
-              </div>
+            <Button variant="ghost" className="flex items-center group transition-colors hover:text-blue-500 outline-none p-1.5 sm:p-2 h-auto">
+              <Share className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
             </Button>
           </div>
         </div>

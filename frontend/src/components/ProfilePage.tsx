@@ -241,13 +241,13 @@ export default function ProfilePage() {
 
       {/* ================= Tabs ================= */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid h-14 w-full grid-cols-6 rounded-none border-b border-zinc-800 bg-black p-0">
+        <TabsList className="flex w-full overflow-x-auto no-scrollbar md:grid h-14 md:grid-cols-6 rounded-none border-b border-zinc-800 bg-black p-0">
           <TabsTrigger
             value="posts"
             className="
-              relative h-full rounded-none border-0 bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
+              shrink-0 px-4 md:px-0 relative h-full rounded-none border-0 bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
               hover:bg-zinc-900 hover:text-white data-[state=active]:bg-transparent data-[state=active]:text-white
-              after:absolute after:bottom-0 after:left-5 after:right-5 after:h-1 after:rounded-full after:bg-transparent
+              after:absolute after:bottom-0 after:left-2 after:right-2 md:after:left-5 md:after:right-5 after:h-1 after:rounded-full after:bg-transparent
               data-[state=active]:after:bg-sky-500
             "
           >
@@ -256,9 +256,9 @@ export default function ProfilePage() {
           <TabsTrigger
             value="replies"
             className="
-              relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
+              shrink-0 px-4 md:px-0 relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
               hover:bg-zinc-900 hover:text-white data-[state=active]:bg-transparent data-[state=active]:text-white
-              after:absolute after:bottom-0 after:left-5 after:right-5 after:h-1 after:rounded-full after:bg-transparent
+              after:absolute after:bottom-0 after:left-2 after:right-2 md:after:left-5 md:after:right-5 after:h-1 after:rounded-full after:bg-transparent
               data-[state=active]:after:bg-sky-500
             "
           >
@@ -267,9 +267,9 @@ export default function ProfilePage() {
           <TabsTrigger
             value="highlights"
             className="
-              relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
+              shrink-0 px-4 md:px-0 relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
               hover:bg-zinc-900 hover:text-white data-[state=active]:bg-transparent data-[state=active]:text-white
-              after:absolute after:bottom-0 after:left-5 after:right-5 after:h-1 after:rounded-full after:bg-transparent
+              after:absolute after:bottom-0 after:left-2 after:right-2 md:after:left-5 md:after:right-5 after:h-1 after:rounded-full after:bg-transparent
               data-[state=active]:after:bg-sky-500
             "
           >
@@ -278,9 +278,9 @@ export default function ProfilePage() {
           <TabsTrigger
             value="articles"
             className="
-              relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
+              shrink-0 px-4 md:px-0 relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
               hover:bg-zinc-900 hover:text-white data-[state=active]:bg-transparent data-[state=active]:text-white
-              after:absolute after:bottom-0 after:left-5 after:right-5 after:h-1 after:rounded-full after:bg-transparent
+              after:absolute after:bottom-0 after:left-2 after:right-2 md:after:left-5 md:after:right-5 after:h-1 after:rounded-full after:bg-transparent
               data-[state=active]:after:bg-sky-500
             "
           >
@@ -289,9 +289,9 @@ export default function ProfilePage() {
           <TabsTrigger
             value="media"
             className="
-              relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
+              shrink-0 px-4 md:px-0 relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
               hover:bg-zinc-900 hover:text-white data-[state=active]:bg-transparent data-[state=active]:text-white
-              after:absolute after:bottom-0 after:left-5 after:right-5 after:h-1 after:rounded-full after:bg-transparent
+              after:absolute after:bottom-0 after:left-2 after:right-2 md:after:left-5 md:after:right-5 after:h-1 after:rounded-full after:bg-transparent
               data-[state=active]:after:bg-sky-500
             "
           >
@@ -300,9 +300,9 @@ export default function ProfilePage() {
           <TabsTrigger
             value="security"
             className="
-              relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
+              shrink-0 px-4 md:px-0 relative h-full rounded-none bg-transparent text-sm font-semibold text-zinc-500 transition-all duration-200
               hover:bg-zinc-900 hover:text-white data-[state=active]:bg-transparent data-[state=active]:text-white
-              after:absolute after:bottom-0 after:left-5 after:right-5 after:h-1 after:rounded-full after:bg-transparent
+              after:absolute after:bottom-0 after:left-2 after:right-2 md:after:left-5 md:after:right-5 after:h-1 after:rounded-full after:bg-transparent
               data-[state=active]:after:bg-sky-500
             "
           >

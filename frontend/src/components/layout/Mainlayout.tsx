@@ -7,6 +7,7 @@ import RightSidebar from "./Rightsidebar";
 import ProfilePage from "../ProfilePage";
 import NotificationsPage from "../NotificationsPage"; 
 import TwitterLogo from "../Twitterlogo";
+import { Home, Search, Bell, User } from "lucide-react";
 
 const Mainlayout = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -29,14 +30,13 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="w-full min-h-screen bg-black text-white flex justify-center">
       
-      {/* Left Sidebar */}
-      <div className="w-20 sm:w-24 md:w-64 border-r border-gray-800 flex justify-end">
+      {/* Left Sidebar (Hidden on mobile < 640px, visible on sm and above) */}
+      <div className="hidden sm:flex w-20 md:w-64 border-r border-gray-800 justify-end">
         <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       </div>
 
-      {/* Main Feed Layout */}
-      <main className="flex-1 w-full max-w-2xl border-r border-gray-800 min-h-screen">
-        {/* 2. Check for notifications state, then profile, then default to children (feed) */}
+      {/* Main Content Area (Full width on mobile, constrained on desktop) */}
+      <main className="flex-1 w-full max-w-2xl border-r border-gray-800 min-h-screen pb-16 sm:pb-0">
         {currentPage === "notifications" ? (
           <NotificationsPage />
         ) : currentPage === "profile" ? (
@@ -46,10 +46,38 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
         )}
       </main>
 
-      {/* Right Sidebar */}
+      {/* Right Sidebar (Desktop only) */}
       <div className="hidden lg:block w-80 p-4">
         <RightSidebar />
       </div>
+
+      {/* Mobile Bottom Navigation Bar (Visible only on < 640px) */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-md border-t border-gray-800 flex justify-around items-center h-14 px-2">
+        <button 
+          onClick={() => setCurrentPage("home")} 
+          className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+        >
+          <Home className={`h-6 w-6 ${currentPage === 'home' ? 'fill-white text-white' : 'text-gray-400'}`} />
+        </button>
+        <button 
+          onClick={() => setCurrentPage("explore")} 
+          className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+        >
+          <Search className={`h-6 w-6 ${currentPage === 'explore' ? 'fill-white text-white' : 'text-gray-400'}`} />
+        </button>
+        <button 
+          onClick={() => setCurrentPage("notifications")} 
+          className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+        >
+          <Bell className={`h-6 w-6 ${currentPage === 'notifications' ? 'fill-white text-white' : 'text-gray-400'}`} />
+        </button>
+        <button 
+          onClick={() => setCurrentPage("profile")} 
+          className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+        >
+          <User className={`h-6 w-6 ${currentPage === 'profile' ? 'fill-white text-white' : 'text-gray-400'}`} />
+        </button>
+      </nav>
       
     </div>
   );
