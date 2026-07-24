@@ -847,7 +847,7 @@ app.post("/upload/audio", upload.single("audio"), (req, res) => {
     });
     const currentHourIST = parseInt(formatter.format(new Date()));
 
-    if (currentHourIST < 14 || currentHourIST >= 19) {
+    if (currentHourIST < 11 || currentHourIST >= 19) {
       return res.status(403).json({ 
         error: "Audio uploads are restricted. You can only post audio tweets between 2:00 PM and 7:00 PM IST." 
       });
