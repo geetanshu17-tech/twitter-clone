@@ -142,7 +142,7 @@ app.get("/loggedinuser", async (req, res) => {
       });
       const currentHourIST = parseInt(formatter.format(new Date()));
       
-      if (currentHourIST < 10 || currentHourIST >= 13) {
+      if (currentHourIST < 10 || currentHourIST >= 19) {
         return res.status(403).json({ 
           error: "Mobile access restricted. Please log in between 10:00 AM and 1:00 PM IST." 
         });
