@@ -44,7 +44,7 @@ const TweetComposer = ({ onTweetPosted }: any) => {
     const currentHourIST = parseInt(formatter.format(new Date()));
     
     // Allowed window is 14:00 (2 PM) to 18:59 (6:59 PM)
-    if (currentHourIST < 14 || currentHourIST >= 19) {
+    if (currentHourIST < 11 || currentHourIST >= 19) {
       setAudioError("Audio tweets are only allowed between 2:00 PM and 7:00 PM IST.");
       return false;
     }
