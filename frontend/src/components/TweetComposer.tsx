@@ -120,9 +120,10 @@ const TweetComposer = ({ onTweetPosted }: any) => {
   const handleVerifyOtp = async () => {
     if (!user || !user.email) return;
     try {
+      // .trim() removes any sneaky mobile keyboard spaces
       await axiosInstance.post("/verify-otp", {
         email: user.email,
-        otp: otpInput
+        otp: otpInput.trim()
       });
 
       setShowOtpModal(false);
@@ -144,9 +145,8 @@ const TweetComposer = ({ onTweetPosted }: any) => {
         const audioFormData = new FormData();
         audioFormData.append("audio", audioFile);
 
-        const uploadRes = await axiosInstance.post("/upload/audio", audioFormData, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
+        // REMOVED manual Content-Type header so browser builds the correct boundary string!
+        const uploadRes = await axiosInstance.post("/upload/audio", audioFormData);
         
         finalAudioUrl = uploadRes.data.url; 
         finalAudioSize = audioFile.size;
@@ -180,12 +180,13 @@ const TweetComposer = ({ onTweetPosted }: any) => {
 
     } catch (error: any) {
       console.error("Backend Error:", error.response?.data || error.message);
-      alert(error.response?.data?.error || "Failed to post tweet");
+      // Alerts the EXACT server message (e.g., "Tweet limit reached" or "Time restricted")
+      const serverMessage = error.response?.data?.error || error.response?.data?.message || "Failed to post tweet";
+      alert(serverMessage);
     } finally {
       setIsLoading(false);
     }
   };
-
   const characterCount = content.length;
   const isOverLimit = characterCount > maxLength;
   
