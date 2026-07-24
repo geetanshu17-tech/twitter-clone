@@ -143,12 +143,29 @@ const TweetComposer = ({ onTweetPosted }: any) => {
 
       if (audioFile) {
         const audioFormData = new FormData();
-        audioFormData.append("audio", audioFile);
-
-        // REMOVED manual Content-Type header so browser builds the correct boundary string!
-        const uploadRes = await axiosInstance.post("/upload/audio", audioFormData);
         
-        finalAudioUrl = uploadRes.data.url; 
+        // Ensure a fallback filename exists so mobile browsers don't send an empty stream
+        const fileName = (audioFile.name && audioFile.name.trim() !== "") 
+          ? audioFile.name 
+          : "mobile_voice_note.mp3";
+
+        audioFormData.append("audio", audioFile, fileName);
+
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || "https://twitter-clone-24tp.onrender.com";
+
+        // Using native fetch guarantees proper multipart boundary construction on mobile browsers
+        const uploadResponse = await fetch(`${backendUrl}/upload/audio`, {
+          method: "POST",
+          body: audioFormData,
+        });
+
+        const uploadData = await uploadResponse.json();
+
+        if (!uploadResponse.ok) {
+          throw new Error(uploadData.error || "Failed to upload audio file");
+        }
+        
+        finalAudioUrl = uploadData.url; 
         finalAudioSize = audioFile.size;
         
         const tempAudio = document.createElement('audio');
@@ -158,6 +175,7 @@ const TweetComposer = ({ onTweetPosted }: any) => {
             finalAudioDuration = tempAudio.duration;
             resolve(true);
           };
+          tempAudio.onerror = () => resolve(true);
         });
       }
 
