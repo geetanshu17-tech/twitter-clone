@@ -141,19 +141,20 @@ const TweetComposer = ({ onTweetPosted }: any) => {
       let finalAudioDuration = null;
       let finalAudioSize = null;
 
+      // STEP 1: UPLOAD AUDIO TO CLOUDINARY
       if (audioFile) {
         const audioFormData = new FormData();
         
-        // Ensure a fallback filename exists so mobile browsers don't send an empty stream
+        // Explicit fallback name for real iOS/Android file streams
         const fileName = (audioFile.name && audioFile.name.trim() !== "") 
           ? audioFile.name 
           : "mobile_voice_note.mp3";
 
         audioFormData.append("audio", audioFile, fileName);
 
+        // Explicit production backend URL for physical phone network requests
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || "https://twitter-clone-24tp.onrender.com";
 
-        // Using native fetch guarantees proper multipart boundary construction on mobile browsers
         const uploadResponse = await fetch(`${backendUrl}/upload/audio`, {
           method: "POST",
           body: audioFormData,
@@ -168,17 +169,35 @@ const TweetComposer = ({ onTweetPosted }: any) => {
         finalAudioUrl = uploadData.url; 
         finalAudioSize = audioFile.size;
         
+        // Physical Mobile-Safe Duration Reader (with 1.5s Timeout Safeguard!)
         const tempAudio = document.createElement('audio');
         tempAudio.src = URL.createObjectURL(audioFile);
+        tempAudio.preload = 'metadata';
+
         await new Promise((resolve) => {
+          // Timeout safeguard so real phones never freeze if WebKit blocks metadata
+          const timeoutId = setTimeout(() => {
+            console.warn("Audio metadata load timed out on physical device. Continuing post...");
+            resolve(true);
+          }, 1500);
+
           tempAudio.onloadedmetadata = () => {
+            clearTimeout(timeoutId);
             finalAudioDuration = tempAudio.duration;
             resolve(true);
           };
-          tempAudio.onerror = () => resolve(true);
+
+          tempAudio.onerror = () => {
+            clearTimeout(timeoutId);
+            resolve(true);
+          };
+
+          // Explicitly force WebKit to load metadata on physical mobile devices
+          tempAudio.load();
         });
       }
 
+      // STEP 2: SAVE TO MONGODB
       const tweetdata = { 
         author: user._id, 
         content: content, 
@@ -198,8 +217,7 @@ const TweetComposer = ({ onTweetPosted }: any) => {
 
     } catch (error: any) {
       console.error("Backend Error:", error.response?.data || error.message);
-      // Alerts the EXACT server message (e.g., "Tweet limit reached" or "Time restricted")
-      const serverMessage = error.response?.data?.error || error.response?.data?.message || "Failed to post tweet";
+      const serverMessage = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to post tweet";
       alert(serverMessage);
     } finally {
       setIsLoading(false);
